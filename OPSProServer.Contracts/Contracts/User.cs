@@ -1,4 +1,4 @@
-﻿namespace OPS_Pro_Server.Models
+﻿namespace OPSProServer.Contracts.Contracts
 {
     public class User
     {

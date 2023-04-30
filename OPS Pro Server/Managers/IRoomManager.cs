@@ -1,4 +1,5 @@
 ﻿using OPS_Pro_Server.Models;
+using OPSProServer.Contracts.Contracts;
 
 namespace OPS_Pro_Server.Managers
 {
@@ -8,6 +9,6 @@ namespace OPS_Pro_Server.Managers
         Room? GetRoom(Guid id);
         Room? GetRoom(User user);
         void AddRoom(Room room);
-        bool IsJoinable(Room room, User user, string? password);
+        void RemoveRoom(Guid id);
     }
 }

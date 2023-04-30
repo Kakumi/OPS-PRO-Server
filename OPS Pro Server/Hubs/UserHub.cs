@@ -1,22 +1,13 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using OPS_Pro_Server.Managers;
 using OPS_Pro_Server.Models;
+using OPSProServer.Contracts.Contracts;
+using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
 {
-    public class UserHub : Hub
+    public partial class GameHub : Hub, IUserHub
     {
-        private readonly ILogger<UserHub> _logger;
-        private readonly IRoomManager _roomManager;
-        private readonly IUserManager _userManager;
-
-        public UserHub(ILogger<UserHub> logger, IRoomManager roomManager, IUserManager userManager)
-        {
-            _logger = logger;
-            _userManager = userManager;
-            _roomManager = roomManager;
-        }
-
         public Guid Register(string username)
         {
             var guid = Guid.NewGuid();
@@ -31,20 +22,7 @@ namespace OPS_Pro_Server.Hubs
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var user = _userManager.GetUser(Context.ConnectionId);
-            if (user != null)
-            {
-                _logger.LogInformation($"User {user.UserName} disconnected ({user.Id}); {exception?.Message}");
-                _userManager.RemoveUser(user);
-
-                if (user.CurrentRoom != null && user.CurrentRoom.Opponent != null)
-                {
-                    await Clients.Group(user.CurrentRoom.Id.ToString()).SendAsync("room_deleted");
-                    //TODO Delete users from group
-                    //user.CurrentRoom.Opponent.CurrentRoom = null;
-                }
-            }
-
-            await base.OnDisconnectedAsync(exception);
+            await LeaveRoom(user);
         }
     }
 }

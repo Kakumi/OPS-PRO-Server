@@ -1,4 +1,4 @@
-﻿namespace OPS_Pro_Server.Models
+﻿namespace OPSProServer.Contracts.Contracts
 {
     public class Room
     {
@@ -14,6 +14,11 @@
             Id = Guid.NewGuid();
             Creator = user;
             Created = DateTime.Now;
+        }
+
+        public bool IsJoinable(User user, string? password)
+        {
+            return Opponent == null && Creator.Id != user.Id && Password == password;
         }
     }
 }

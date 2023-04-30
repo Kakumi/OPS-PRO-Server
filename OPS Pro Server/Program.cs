@@ -31,7 +31,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<GameHub>("/ws/game");
-app.MapHub<RoomHub>("/ws/room");
-app.MapHub<UserHub>("/ws/user");
 
 app.Run();

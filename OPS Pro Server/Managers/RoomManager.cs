@@ -1,4 +1,5 @@
 ﻿using OPS_Pro_Server.Models;
+using OPSProServer.Contracts.Contracts;
 
 namespace OPS_Pro_Server.Managers
 {
@@ -34,9 +35,9 @@ namespace OPS_Pro_Server.Managers
             }
         }
 
-        public bool IsJoinable(Room room, User user, string? password)
+        public void RemoveRoom(Guid id)
         {
-            return room.Opponent == null && room.Creator.Id != user.Id && room.Password == password;
+            _rooms.RemoveAll(x => x.Id == id);
         }
     }
 }

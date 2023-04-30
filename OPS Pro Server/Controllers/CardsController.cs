@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Options;
 using OPS_Pro_Server.Models;
+using OPSProServer.Contracts.Contracts;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text.Json;

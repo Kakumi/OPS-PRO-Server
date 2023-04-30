@@ -1,4 +1,5 @@
 ﻿using OPS_Pro_Server.Models;
+using OPSProServer.Contracts.Contracts;
 
 namespace OPS_Pro_Server.Managers
 {
