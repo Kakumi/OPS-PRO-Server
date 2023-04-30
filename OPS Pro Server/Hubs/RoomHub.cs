@@ -48,6 +48,7 @@ namespace OPS_Pro_Server.Hubs
                 room.Opponent = user;
                 await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
                 await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+                return true;
             }
 
             return false;

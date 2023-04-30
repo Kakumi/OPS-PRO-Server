@@ -28,6 +28,47 @@ namespace OPS_Pro_Server.Managers
                 OpponentReady = false,
                 UsePassword = false,
             });
+
+            _rooms.Add(new Room()
+            {
+                Id = Guid.NewGuid(),
+                Creator = new User()
+                {
+                    Id = Guid.NewGuid(),
+                    ConnectionId = "test",
+                    Username = "Server"
+                },
+                Opponent = null,
+                Password = "123",
+                Created = DateTime.Now,
+                Description = "Room created from the server with password.",
+                CreatorReady = false,
+                OpponentReady = false,
+                UsePassword = true,
+            });
+
+            _rooms.Add(new Room()
+            {
+                Id = Guid.NewGuid(),
+                Creator = new User()
+                {
+                    Id = Guid.NewGuid(),
+                    ConnectionId = "test",
+                    Username = "Server"
+                },
+                Opponent = new User()
+                {
+                    Id = Guid.NewGuid(),
+                    ConnectionId = "test",
+                    Username = "Server Opponent"
+                },
+                Password = null,
+                Created = DateTime.Now,
+                Description = "Room created from the server but full.",
+                CreatorReady = false,
+                OpponentReady = false,
+                UsePassword = false,
+            });
 #endif
         }
 
