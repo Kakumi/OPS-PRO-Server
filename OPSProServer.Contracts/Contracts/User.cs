@@ -2,16 +2,17 @@
 {
     public class User
     {
-        public Guid Id { get; private set; }
-        public string ConnectionId { get; private set; }
-        public string UserName { get; private set; }
-        public Room? CurrentRoom { get; set; }
+        public Guid Id { get; set; }
+        public string ConnectionId { get; set; }
+        public string Username { get; set; }
 
         public User(Guid id, string connectionId, string username)
         {
             Id = id;
             ConnectionId = connectionId;
-            UserName = username;
+            Username = username;
         }
+
+        public User() { }
     }
 }

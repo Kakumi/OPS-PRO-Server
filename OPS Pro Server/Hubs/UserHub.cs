@@ -22,6 +22,8 @@ namespace OPS_Pro_Server.Hubs
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var user = _userManager.GetUser(Context.ConnectionId);
+            _logger.LogInformation("User {Username} disconnected ({Id})", user?.Username, user?.Id);
+
             await LeaveRoom(user);
         }
     }

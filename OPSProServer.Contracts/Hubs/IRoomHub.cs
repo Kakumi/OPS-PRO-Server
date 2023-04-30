@@ -11,10 +11,11 @@ namespace OPSProServer.Contracts.Hubs
     {
         Task<bool> CreateRoom(Guid userId, string? password, string? description);
 
-        IReadOnlyList<Room> GetRooms();
+        List<Room> GetRooms();
 
         Task<bool> JoinRoom(Guid userId, Guid roomId, string? password);
 
         Task<bool> LeaveRoom(Guid userId);
+        Task<bool> SetReady(Guid userId, bool ready);
     }
 }

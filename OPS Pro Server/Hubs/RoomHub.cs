@@ -2,6 +2,7 @@
 using OPS_Pro_Server.Managers;
 using OPS_Pro_Server.Models;
 using OPSProServer.Contracts.Contracts;
+using OPSProServer.Contracts.Events;
 using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
@@ -16,11 +17,11 @@ namespace OPS_Pro_Server.Hubs
                 var room = new Room(user)
                 {
                     Password = password,
+                    UsePassword = !string.IsNullOrWhiteSpace(password),
                     Description = description
                 };
 
                 _roomManager.AddRoom(room);
-                user.CurrentRoom = room;
 
                 await Groups.AddToGroupAsync(Context.ConnectionId, room.Id.ToString());
 
@@ -30,11 +31,14 @@ namespace OPS_Pro_Server.Hubs
             return false;
         }
 
-        public IReadOnlyList<Room> GetRooms()
+        public List<Room> GetRooms()
         {
-            return _roomManager.GetRooms();
+            //Remove password from room
+            var rooms = _roomManager.GetRooms().Select(x => x.Clone()).ToList();
+            rooms.ForEach(x => x.Password = null);
+            return rooms;
         }
-
+        
         public async Task<bool> JoinRoom(Guid id, Guid roomId, string? password)
         {
             var user = _userManager.GetUser(id);
@@ -42,9 +46,8 @@ namespace OPS_Pro_Server.Hubs
             if (user != null && room != null && room.IsJoinable(user, password))
             {
                 room.Opponent = user;
-                user.CurrentRoom = room;
                 await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
-                await Clients.Group(roomId.ToString()).SendAsync("room_full");
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
             }
 
             return false;
@@ -58,31 +61,60 @@ namespace OPS_Pro_Server.Hubs
 
         protected async Task<bool> LeaveRoom(User? user)
         {
-            if (user != null && user.CurrentRoom != null)
+            if (user != null)
             {
-                var room = user.CurrentRoom;
-
-                user.CurrentRoom = null;
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.Id.ToString());
-
-                if (room.Creator.Id == user.Id)
+                var room = _roomManager.GetRoom(user);
+                if (room != null)
                 {
-                    if (room.Opponent != null)
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.Id.ToString());
+
+                    if (room.Creator.Id == user.Id)
                     {
-                        await Groups.RemoveFromGroupAsync(room.Opponent.ConnectionId, room.Id.ToString());
-                        await Clients.Client(room.Opponent.ConnectionId).SendAsync("room_deleted");
-                    }
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomDeleted));
 
-                    _roomManager.RemoveRoom(room.Id);
-                }
-                else if (room.Opponent?.Id == user.Id)
-                {
-                    room.Opponent = null;
-                    await Clients.Group(room.Id.ToString()).SendAsync("room_waiting");
+                        if (room.Opponent != null)
+                        {
+                            await Groups.RemoveFromGroupAsync(room.Opponent.ConnectionId, room.Id.ToString());
+                        }
+
+                        _roomManager.RemoveRoom(room.Id);
+                    }
+                    else if (room.Opponent?.Id == user.Id)
+                    {
+                        room.Opponent = null;
+                        room.OpponentReady = false;
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+                    }
                 }
             }
 
             return true;
+        }
+
+        public async Task<bool> SetReady(Guid userId, bool ready)
+        {
+            var user = _userManager.GetUser(userId);
+            if (user != null)
+            {
+                var room = _roomManager.GetRoom(user);
+                if (room != null)
+                {
+                    if (room.Creator == user)
+                    {
+                        room.CreatorReady = ready;
+                    }
+                    else
+                    {
+                        room.OpponentReady = ready;
+                    }
+
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+
+                    return ready;
+                }
+            }
+
+            return false;
         }
     }
 }

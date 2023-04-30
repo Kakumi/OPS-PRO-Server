@@ -10,9 +10,28 @@ namespace OPS_Pro_Server.Managers
         public RoomManager()
         {
             _rooms = new List<Room>();
+#if DEBUG
+            _rooms.Add(new Room()
+            {
+                Id = Guid.NewGuid(),
+                Creator = new User()
+                {
+                    Id = Guid.NewGuid(),
+                    ConnectionId = "test",
+                    Username = "Server"
+                },
+                Opponent = null,
+                Password = null,
+                Created = DateTime.Now,
+                Description = "Room created from the server.",
+                CreatorReady = false,
+                OpponentReady = false,
+                UsePassword = false,
+            });
+#endif
         }
 
-        public IReadOnlyList<Room> GetRooms()
+        public List<Room> GetRooms()
         {
             return _rooms;
         }
@@ -24,7 +43,7 @@ namespace OPS_Pro_Server.Managers
 
         public Room? GetRoom(User user)
         {
-            return user.CurrentRoom;
+            return _rooms.FirstOrDefault(x => x.Creator.Id == user.Id || x.Opponent?.Id == user.Id);
         }
 
         public void AddRoom(Room room)
