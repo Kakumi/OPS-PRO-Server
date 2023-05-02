@@ -13,14 +13,14 @@ namespace OPS_Pro_Server.Hubs
         {
             try
             {
-                var hasPassword = !string.IsNullOrWhiteSpace(password);
+                var hasPassword = !string.IsNullOrEmpty(password);
                 _logger.LogInformation("Creating room for user {Id} with password: {HasPassword} and description: {Description}", id, hasPassword, description);
                 var user = _userManager.GetUser(id);
                 if (user != null)
                 {
                     var room = new Room(user)
                     {
-                        Password = password,
+                        Password = hasPassword ? password : null,
                         UsePassword = hasPassword,
                         Description = description
                     };
@@ -71,6 +71,9 @@ namespace OPS_Pro_Server.Hubs
                     await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     _logger.LogInformation("User {Id} joined room sucessfully", id);
+
+                    await Exclude(Guid.NewGuid(), id, roomId);
+
                     return true;
                 }
 
@@ -166,6 +169,35 @@ namespace OPS_Pro_Server.Hubs
                 else
                 {
                     _logger.LogInformation("Failed to update ready status for the user {UserId}, user doesn't exist.", userId);
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return false;
+            }
+        }
+
+        public async Task<bool> Exclude(Guid userId, Guid opponentId, Guid roomId)
+        {
+            try
+            {
+                var user = _userManager.GetUser(userId);
+                var opponent = _userManager.GetUser(opponentId);
+                var room = _roomManager.GetRoom(roomId);
+
+                if (user != null && opponent != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
+                {
+                    room.Opponent = null;
+                    room.OpponentReady = false;
+
+                    await Groups.RemoveFromGroupAsync(opponent.ConnectionId, room.Id.ToString());
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+                    await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IRoomHubEvent.RoomExcluded));
+
+                    return true;
                 }
 
                 return false;

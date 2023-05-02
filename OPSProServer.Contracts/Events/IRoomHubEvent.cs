@@ -11,5 +11,6 @@ namespace OPSProServer.Contracts.Events
     {
         Room RoomUpdated();
         void RoomDeleted();
+        void RoomExcluded();
     }
 }
