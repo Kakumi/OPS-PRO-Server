@@ -28,6 +28,26 @@
             return Opponent == null && Creator.Id != user.Id && Password == password;
         }
 
+        public bool IsInside(User user)
+        {
+            return Creator.Id == user.Id || Opponent?.Id == user.Id;
+        }
+
+        public bool CanStart()
+        {
+            return Opponent != null && OpponentReady && Creator != null && CreatorReady;
+        }
+
+        public User? GetOpponent(User user)
+        {
+            if (user.Id == Creator.Id)
+            {
+                return Opponent;
+            }
+
+            return Creator;
+        }
+
         public Room Clone()
         {
             return new Room()

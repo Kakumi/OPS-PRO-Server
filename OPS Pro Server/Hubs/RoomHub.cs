@@ -25,6 +25,16 @@ namespace OPS_Pro_Server.Hubs
                         Description = description
                     };
 
+#if DEBUG
+                    room.OpponentReady = true;
+                    room.Opponent = new User()
+                    {
+                        Id = Guid.NewGuid(),
+                        Username = "Server Bot",
+                        ConnectionId = "serverbot"
+                    };
+#endif
+
                     _roomManager.AddRoom(room);
 
                     await Groups.AddToGroupAsync(Context.ConnectionId, room.Id.ToString());
@@ -42,19 +52,19 @@ namespace OPS_Pro_Server.Hubs
             }
         }
 
-        public List<Room> GetRooms()
+        public Task<List<Room>> GetRooms()
         {
             try
             {
                 //Remove password from room
                 var rooms = _roomManager.GetRooms().Select(x => x.Clone()).ToList();
                 rooms.ForEach(x => x.Password = null);
-                return rooms;
+                return Task.FromResult(rooms);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                return new List<Room>();
+                return Task.FromResult(new List<Room>());
             }
         }
         
@@ -207,6 +217,21 @@ namespace OPS_Pro_Server.Hubs
                 _logger.LogError(ex, ex.Message);
                 return false;
             }
+        }
+
+        public Task<Room> GetRoom(Guid userId)
+        {
+            var user = _userManager.GetUser(userId);
+            if (user != null)
+            {
+                var room = _roomManager.GetRoom(user);
+                if (room != null)
+                {
+                    return Task.FromResult(room);
+                }
+            }
+
+            return Task.FromResult<Room>(null);
         }
     }
 }
