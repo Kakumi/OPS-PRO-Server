@@ -14,6 +14,7 @@
         public bool UsePassword { get; set; }
         public string? Password { get; set; }
         public string? Description { get; set; }
+        public Guid? FirstToPlay { get; set; }
 
         public Room(User user)
         {
@@ -49,6 +50,16 @@
             OpponentRPS = RockPaperScissors.None;
         }
 
+        public User? GetOpponent(Guid userId)
+        {
+            if (userId == Creator.Id)
+            {
+                return Opponent;
+            }
+
+            return Creator;
+        }
+
         public User? GetOpponent(User user)
         {
             if (user.Id == Creator.Id)
@@ -73,6 +84,32 @@
                 OpponentReady = this.OpponentReady,
                 UsePassword = this.UsePassword,
             };
+        }
+
+        public Guid? GetRockPaperScissorsWinner()
+        {
+            if (Opponent != null && CreatorRPS != RockPaperScissors.None && OpponentRPS != RockPaperScissors.None)
+            {
+                // Define the relationships between moves
+                int[,] relationships = { { 0, -1, 1 }, { 1, 0, -1 }, { -1, 1, 0 } };
+
+                // Determine winner
+                int creatorIndex = (int)CreatorRPS - 1;
+                int opponentIndex = (int)OpponentRPS - 1;
+                int result = relationships[creatorIndex, opponentIndex];
+
+                // Return winner id
+                if (result == 1)
+                {
+                    return Creator.Id;
+                }
+                else if (result == -1)
+                {
+                    return Opponent.Id;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -11,5 +11,6 @@ namespace OPSProServer.Contracts.Hubs
     {
         Task<bool> LaunchGame(Guid roomId);
         Task<bool> SetRockPaperScissors(Guid userId, RockPaperScissors rps);
+        Task<bool> SetFirstPlayer(Guid userId, Guid firstToPlayId);
     }
 }

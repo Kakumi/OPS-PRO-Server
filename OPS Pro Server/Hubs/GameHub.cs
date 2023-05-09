@@ -44,34 +44,96 @@ namespace OPS_Pro_Server.Hubs
 
         public async Task<bool> SetRockPaperScissors(Guid userId, RockPaperScissors rps)
         {
-            var user = _userManager.GetUser(userId);
-            if (user != null)
+            try
             {
-                var room = _roomManager.GetRoom(user);
-                if (room != null && room.Opponent != null)
+                var user = _userManager.GetUser(userId);
+                if (user != null)
                 {
-                    if (userId == room.Creator.Id)
+                    var room = _roomManager.GetRoom(user);
+                    if (room != null && room.Opponent != null)
                     {
-                        room.CreatorRPS = rps;
-                    } else if (userId == room.Opponent.Id)
-                    {
-                        room.OpponentRPS = rps;
+                        if (userId == room.Creator.Id)
+                        {
+                            room.CreatorRPS = rps;
+                        }
+                        else if (userId == room.Opponent.Id)
+                        {
+                            room.OpponentRPS = rps;
+                        }
+
+                        if (room.CreatorRPS != RockPaperScissors.None && room.OpponentRPS != RockPaperScissors.None)
+                        {
+                            var dic = new Dictionary<Guid, RockPaperScissors>();
+                            dic.Add(room.Creator.Id, room.CreatorRPS);
+                            dic.Add(room.Opponent.Id, room.OpponentRPS);
+
+                            var winnerId = room.GetRockPaperScissorsWinner();
+
+                            var result = new RockPaperScissorsResult()
+                            {
+                                Signs = dic,
+                                Winner = winnerId
+                            };
+
+                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.RPSExecuted), result);
+
+                            if (winnerId != null)
+                            {
+                                var winnerUser = _userManager.GetUser(winnerId ?? Guid.Empty);
+                                if (winnerUser == null)
+                                {
+                                    winnerUser = room.Creator;
+                                }
+
+                                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.ChooseFirstPlayerToPlay));
+                            }
+                            else
+                            {
+                                //If winner is null it's tie, reset values
+                                room.CreatorRPS = RockPaperScissors.None;
+                                room.OpponentRPS = RockPaperScissors.None;
+
+#if DEBUG
+                                room.OpponentRPS = RockPaperScissors.Rock;
+#endif
+                            }
+                        }
+
+                        return true;
                     }
-
-                    if (room.CreatorRPS != RockPaperScissors.None && room.OpponentRPS != RockPaperScissors.None)
-                    {
-                        var dic = new Dictionary<Guid, RockPaperScissors>();
-                        dic.Add(room.Creator.Id, room.CreatorRPS);
-                        dic.Add(room.Opponent.Id, room.OpponentRPS);
-
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.RPSExecuted), dic);
-                    }
-
-                    return true;
                 }
-            }
 
-            return false;
+                return false;
+            } catch(Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return false;
+            }
+        }
+
+        public async Task<bool> SetFirstPlayer(Guid userId, Guid firstToPlayId)
+        {
+            try
+            {
+                var user = _userManager.GetUser(userId);
+                if (user != null)
+                {
+                    var room = _roomManager.GetRoom(user);
+                    if (room != null && room.Opponent != null)
+                    {
+                        room.FirstToPlay = firstToPlayId;
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.FirstPlayerDecided), firstToPlayId);
+
+                        return true;
+                    }
+                }
+
+                return false;
+            } catch(Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return false;
+            }
         }
     }
 }
