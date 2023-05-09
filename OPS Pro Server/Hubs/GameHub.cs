@@ -28,6 +28,7 @@ namespace OPS_Pro_Server.Hubs
                 if (room != null && room.CanStart())
                 {
                     _logger.LogInformation("Start duel for room {RoomId}", roomId);
+                    room.State = RoomState.RockPaperScissors;
                     await Clients.Group(roomId.ToString()).SendAsync(nameof(IGameHubEvent.GameLaunched));
                     return true;
                 }
@@ -39,6 +40,38 @@ namespace OPS_Pro_Server.Hubs
                 _logger.LogError(ex, ex.Message);
                 return false;
             }
+        }
+
+        public async Task<bool> SetRockPaperScissors(Guid userId, RockPaperScissors rps)
+        {
+            var user = _userManager.GetUser(userId);
+            if (user != null)
+            {
+                var room = _roomManager.GetRoom(user);
+                if (room != null && room.Opponent != null)
+                {
+                    if (userId == room.Creator.Id)
+                    {
+                        room.CreatorRPS = rps;
+                    } else if (userId == room.Opponent.Id)
+                    {
+                        room.OpponentRPS = rps;
+                    }
+
+                    if (room.CreatorRPS != RockPaperScissors.None && room.OpponentRPS != RockPaperScissors.None)
+                    {
+                        var dic = new Dictionary<Guid, RockPaperScissors>();
+                        dic.Add(room.Creator.Id, room.CreatorRPS);
+                        dic.Add(room.Opponent.Id, room.OpponentRPS);
+
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.RPSExecuted), dic);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

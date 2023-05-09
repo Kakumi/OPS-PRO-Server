@@ -3,10 +3,13 @@
     public class Room
     {
         public Guid Id { get; set; }
+        public RoomState State { get; set; }
         public User Creator { get; set; }
         public bool CreatorReady { get; set; }
+        public RockPaperScissors CreatorRPS { get; set; }
         public User? Opponent { get; set; }
         public bool OpponentReady { get; set; }
+        public RockPaperScissors OpponentRPS { get; set; }
         public DateTime Created { get; set; }
         public bool UsePassword { get; set; }
         public string? Password { get; set; }
@@ -15,6 +18,7 @@
         public Room(User user)
         {
             Id = Guid.NewGuid();
+            State = RoomState.Created;
             Creator = user;
             Created = DateTime.Now;
             CreatorReady = false;
@@ -36,6 +40,13 @@
         public bool CanStart()
         {
             return Opponent != null && OpponentReady && Creator != null && CreatorReady;
+        }
+
+        public void RemoveOpponent()
+        {
+            Opponent = null;
+            OpponentReady = false;
+            OpponentRPS = RockPaperScissors.None;
         }
 
         public User? GetOpponent(User user)

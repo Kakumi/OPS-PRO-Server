@@ -27,6 +27,7 @@ namespace OPS_Pro_Server.Hubs
 
 #if DEBUG
                     room.OpponentReady = true;
+                    room.OpponentRPS = RockPaperScissors.Paper;
                     room.Opponent = new User()
                     {
                         Id = Guid.NewGuid(),
@@ -136,8 +137,7 @@ namespace OPS_Pro_Server.Hubs
                     else if (room.Opponent?.Id == user.Id)
                     {
                         _logger.LogInformation("The leaver is the opponent, remove the user from the room {Id}.", room.Id);
-                        room.Opponent = null;
-                        room.OpponentReady = false;
+                        room.RemoveOpponent();
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     }
                 }
@@ -200,8 +200,7 @@ namespace OPS_Pro_Server.Hubs
 
                 if (user != null && opponent != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
                 {
-                    room.Opponent = null;
-                    room.OpponentReady = false;
+                    room.RemoveOpponent();
 
                     await Groups.RemoveFromGroupAsync(opponent.ConnectionId, room.Id.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);

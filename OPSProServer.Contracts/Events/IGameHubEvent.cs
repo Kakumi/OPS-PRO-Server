@@ -10,5 +10,6 @@ namespace OPSProServer.Contracts.Events
     public interface IGameHubEvent
     {
         void GameLaunched();
+        Dictionary<Guid, RockPaperScissors> RPSExecuted();
     }
 }
