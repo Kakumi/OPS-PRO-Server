@@ -13,5 +13,6 @@ namespace OPSProServer.Contracts.Events
         RockPaperScissorsResult RPSExecuted();
         void ChooseFirstPlayerToPlay();
         Guid FirstPlayerDecided();
+        PlaymatSync SyncBoard();
     }
 }

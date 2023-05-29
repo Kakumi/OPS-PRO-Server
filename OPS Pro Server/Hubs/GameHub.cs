@@ -135,5 +135,53 @@ namespace OPS_Pro_Server.Hubs
                 return false;
             }
         }
+
+        public async Task<bool> SyncBoard(Guid userId, PlaymatSync playmatSync)
+        {
+            try
+            {
+                var user = _userManager.GetUser(userId);
+                if (user != null)
+                {
+                    var room = _roomManager.GetRoom(user);
+                    if (room != null && room.Opponent != null && room.GetOpponent(userId) != null)
+                    {
+                        var opponent = room.GetOpponent(userId);
+                        await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.SyncBoard), playmatSync);
+
+#if DEBUG
+                        await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.SyncBoard), new PlaymatSync()
+                        {
+                            UserId = opponent.Id,
+                            Leader = Guid.NewGuid(),
+                            Life = Guid.NewGuid(),
+                            Deck = Guid.NewGuid(),
+                            Stage = Guid.NewGuid(),
+                            Trash = Guid.NewGuid(),
+                            Cost = Guid.NewGuid(),
+                            DonDeck = Guid.NewGuid(),
+                            Characters = new List<Guid>()
+                            {
+                                Guid.NewGuid(),
+                                Guid.NewGuid(),
+                                Guid.NewGuid(),
+                                Guid.NewGuid(),
+                                Guid.NewGuid()
+                            }
+                        });
+#endif
+
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return false;
+            }
+        }
     }
 }
