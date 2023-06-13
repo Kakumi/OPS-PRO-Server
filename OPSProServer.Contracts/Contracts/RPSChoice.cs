@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace OPSProServer.Contracts.Contracts
 {
-    public enum RockPaperScissors
+    public enum RPSChoice
     {
         None,
         Rock,

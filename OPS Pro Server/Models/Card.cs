@@ -1,6 +1,6 @@
 ﻿namespace OPSProServer.Contracts.Contracts
 {
-    public class Card : ICard
+    public class Card : CardInfo
     {
         public string? Id { get; set; }
         public List<string>? Images { get; set; }

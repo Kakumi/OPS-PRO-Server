@@ -7,7 +7,7 @@ using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
 {
-    public partial class GameHub : Hub, IGameHub
+    internal partial class GameHub : Hub, IGameHub
     {
         protected readonly ILogger<GameHub> _logger;
         protected readonly IRoomManager _roomManager;
@@ -42,7 +42,7 @@ namespace OPS_Pro_Server.Hubs
             }
         }
 
-        public async Task<bool> SetRockPaperScissors(Guid userId, RockPaperScissors rps)
+        public async Task<bool> SetRockPaperScissors(Guid userId, RPSChoice rps)
         {
             try
             {
@@ -61,15 +61,15 @@ namespace OPS_Pro_Server.Hubs
                             room.OpponentRPS = rps;
                         }
 
-                        if (room.CreatorRPS != RockPaperScissors.None && room.OpponentRPS != RockPaperScissors.None)
+                        if (room.CreatorRPS != RPSChoice.None && room.OpponentRPS != RPSChoice.None)
                         {
-                            var dic = new Dictionary<Guid, RockPaperScissors>();
+                            var dic = new Dictionary<Guid, RPSChoice>();
                             dic.Add(room.Creator.Id, room.CreatorRPS);
                             dic.Add(room.Opponent.Id, room.OpponentRPS);
 
                             var winnerId = room.GetRockPaperScissorsWinner();
 
-                            var result = new RockPaperScissorsResult()
+                            var result = new RPSResult()
                             {
                                 Signs = dic,
                                 Winner = winnerId
@@ -90,11 +90,11 @@ namespace OPS_Pro_Server.Hubs
                             else
                             {
                                 //If winner is null it's tie, reset values
-                                room.CreatorRPS = RockPaperScissors.None;
-                                room.OpponentRPS = RockPaperScissors.None;
+                                room.CreatorRPS = RPSChoice.None;
+                                room.OpponentRPS = RPSChoice.None;
 
 #if DEBUG
-                                room.OpponentRPS = RockPaperScissors.Rock;
+                                room.OpponentRPS = RPSChoice.Rock;
 #endif
                             }
                         }

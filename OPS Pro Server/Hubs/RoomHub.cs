@@ -27,7 +27,7 @@ namespace OPS_Pro_Server.Hubs
 
 #if DEBUG
                     room.OpponentReady = true;
-                    room.OpponentRPS = RockPaperScissors.Paper;
+                    room.OpponentRPS = RPSChoice.Paper;
                     room.Opponent = new User()
                     {
                         Id = Guid.NewGuid(),

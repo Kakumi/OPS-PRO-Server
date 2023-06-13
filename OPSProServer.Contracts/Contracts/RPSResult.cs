@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace OPSProServer.Contracts.Contracts
 {
-    public class RockPaperScissorsResult
+    public class RPSResult
     {
-        public Dictionary<Guid, RockPaperScissors> Signs { get; set; }
+        public Dictionary<Guid, RPSChoice> Signs { get; set; }
         public Guid? Winner { get; set; }
 
-        public RockPaperScissorsResult()
+        public RPSResult()
         {
-            Signs = new Dictionary<Guid, RockPaperScissors>();
+            Signs = new Dictionary<Guid, RPSChoice>();
         }
     }
 }

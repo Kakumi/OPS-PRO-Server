@@ -10,7 +10,7 @@ namespace OPSProServer.Contracts.Events
     public interface IGameHubEvent
     {
         void GameLaunched();
-        RockPaperScissorsResult RPSExecuted();
+        RPSResult RPSExecuted();
         void ChooseFirstPlayerToPlay();
         Guid FirstPlayerDecided();
         PlaymatSync SyncBoard();
