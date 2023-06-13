@@ -14,7 +14,7 @@ namespace OPSProServer.Contracts.Hubs
         Task<Room> GetRoom(Guid userId);
         Task<bool> JoinRoom(Guid userId, Guid roomId, string? password);
         Task<bool> LeaveRoom(Guid userId);
-        Task<bool> SetReady(Guid userId, bool ready);
+        Task<bool> SetReady(Guid userId, DeckInfo deckInfo);
         Task<bool> Exclude(Guid userId, Guid opponentId, Guid roomId);
     }
 }

@@ -13,6 +13,5 @@ namespace OPSProServer.Contracts.Events
         RPSResult RPSExecuted();
         void ChooseFirstPlayerToPlay();
         Guid FirstPlayerDecided();
-        PlaymatSync SyncBoard();
     }
 }
