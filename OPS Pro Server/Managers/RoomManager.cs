@@ -11,64 +11,13 @@ namespace OPS_Pro_Server.Managers
         {
             _rooms = new List<Room>();
 #if DEBUG
-            _rooms.Add(new Room()
-            {
-                Id = Guid.NewGuid(),
-                Creator = new User()
-                {
-                    Id = Guid.NewGuid(),
-                    ConnectionId = "test",
-                    Username = "Server"
-                },
-                Opponent = null,
-                Password = null,
-                Created = DateTime.Now,
-                Description = "Room created from the server.",
-                CreatorReady = false,
-                OpponentReady = false,
-                UsePassword = false,
-            });
+            _rooms.Add(new Room(new User("test", "Server"), "Server test room"));
 
-            _rooms.Add(new Room()
-            {
-                Id = Guid.NewGuid(),
-                Creator = new User()
-                {
-                    Id = Guid.NewGuid(),
-                    ConnectionId = "test",
-                    Username = "Server"
-                },
-                Opponent = null,
-                Password = "123",
-                Created = DateTime.Now,
-                Description = "Room created from the server with password.",
-                CreatorReady = false,
-                OpponentReady = false,
-                UsePassword = true,
-            });
+            _rooms.Add(new Room(new User("test", "Server"), "Server test room (password)", "admin"));
 
-            _rooms.Add(new Room()
-            {
-                Id = Guid.NewGuid(),
-                Creator = new User()
-                {
-                    Id = Guid.NewGuid(),
-                    ConnectionId = "test",
-                    Username = "Server"
-                },
-                Opponent = new User()
-                {
-                    Id = Guid.NewGuid(),
-                    ConnectionId = "test",
-                    Username = "Server Opponent"
-                },
-                Password = null,
-                Created = DateTime.Now,
-                Description = "Room created from the server but full.",
-                CreatorReady = false,
-                OpponentReady = false,
-                UsePassword = false,
-            });
+            var roomFull = new Room(new User("test", "Server"), "Server test room (full)");
+            roomFull.SetOpponent(new User("test2", "Server 2"));
+            _rooms.Add(roomFull);
 #endif
         }
 

@@ -18,22 +18,11 @@ namespace OPS_Pro_Server.Hubs
                 var user = _userManager.GetUser(id);
                 if (user != null)
                 {
-                    var room = new Room(user)
-                    {
-                        Password = hasPassword ? password : null,
-                        UsePassword = hasPassword,
-                        Description = description
-                    };
+                    var room = new Room(user, description, password);
 
 #if DEBUG
-                    room.OpponentReady = true;
-                    room.OpponentRPS = RPSChoice.Paper;
-                    room.Opponent = new User()
-                    {
-                        Id = Guid.NewGuid(),
-                        Username = "Server Bot",
-                        ConnectionId = "serverbot"
-                    };
+                    room.SetOpponent(new User("serverbot", "Server Bot"));
+                    room.Opponent!.RPSChoice = RPSChoice.Paper;
 #endif
 
                     _roomManager.AddRoom(room);
@@ -53,19 +42,18 @@ namespace OPS_Pro_Server.Hubs
             }
         }
 
-        public Task<List<Room>> GetRooms()
+        public Task<List<SecureRoom>> GetRooms()
         {
             try
             {
                 //Remove password from room
-                var rooms = _roomManager.GetRooms().Select(x => x.Clone()).ToList();
-                rooms.ForEach(x => x.Password = null);
+                var rooms = _roomManager.GetRooms().Select(x => new SecureRoom(x)).ToList();
                 return Task.FromResult(rooms);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                return Task.FromResult(new List<Room>());
+                return Task.FromResult(new List<SecureRoom>());
             }
         }
         
@@ -78,7 +66,7 @@ namespace OPS_Pro_Server.Hubs
                 var room = _roomManager.GetRoom(roomId);
                 if (user != null && room != null && room.IsJoinable(user, password))
                 {
-                    room.Opponent = user;
+                    room.SetOpponent(user);
                     await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     _logger.LogInformation("User {Id} joined room sucessfully", id);
@@ -137,7 +125,7 @@ namespace OPS_Pro_Server.Hubs
                     else if (room.Opponent?.Id == user.Id)
                     {
                         _logger.LogInformation("The leaver is the opponent, remove the user from the room {Id}.", room.Id);
-                        room.RemoveOpponent();
+                        room.SetOpponent(null);
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     }
                 }
@@ -146,7 +134,7 @@ namespace OPS_Pro_Server.Hubs
             return true;
         }
 
-        public async Task<bool> SetReady(Guid userId, bool ready)
+        public async Task<bool> SetReady(Guid userId, DeckInfo? deckInfo)
         {
             try
             {
@@ -156,15 +144,16 @@ namespace OPS_Pro_Server.Hubs
                     var room = _roomManager.GetRoom(user);
                     if (room != null)
                     {
+                        var ready = deckInfo != null;
                         if (room.Creator == user)
                         {
                             _logger.LogInformation("Update status for the creator {UserId} to {Ready}.", userId, ready);
-                            room.CreatorReady = ready;
+                            room.Creator.Deck = deckInfo;
                         }
                         else
                         {
                             _logger.LogInformation("Update status for the opponent {UserId} to {Ready}.", userId, ready);
-                            room.OpponentReady = ready;
+                            room.Creator.Deck = deckInfo;
                         }
 
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
@@ -200,7 +189,7 @@ namespace OPS_Pro_Server.Hubs
 
                 if (user != null && opponent != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
                 {
-                    room.RemoveOpponent();
+                    room.SetOpponent(null);
 
                     await Groups.RemoveFromGroupAsync(opponent.ConnectionId, room.Id.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
@@ -218,7 +207,7 @@ namespace OPS_Pro_Server.Hubs
             }
         }
 
-        public Task<Room> GetRoom(Guid userId)
+        public Task<SecureRoom> GetRoom(Guid userId)
         {
             var user = _userManager.GetUser(userId);
             if (user != null)
@@ -226,11 +215,11 @@ namespace OPS_Pro_Server.Hubs
                 var room = _roomManager.GetRoom(user);
                 if (room != null)
                 {
-                    return Task.FromResult(room);
+                    return Task.FromResult(new SecureRoom(room));
                 }
             }
 
-            return Task.FromResult<Room>(null);
+            return Task.FromResult<SecureRoom>(null);
         }
     }
 }

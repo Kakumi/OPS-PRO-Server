@@ -10,7 +10,6 @@
         public bool UsePassword { get; private set; }
         public string? Password { get; private set; }
         public string? Description { get; private set; }
-        public RPSGame? RPSGame { get; private set; }
         public Game? Game { get; private set; }
 
         public Room(User user, string? description = null, string? password = null)
@@ -39,19 +38,15 @@
             return Opponent != null && Opponent.Ready && Creator != null && Creator.Ready;
         }
 
-        public void SetOpponent(User opponent)
+        public void SetOpponent(User? opponent)
         {
             if (opponent != null)
             {
                 Opponent = new UserRoom(opponent);
-                RPSGame = new RPSGame(Creator.Id, Opponent.Id);
+            } else
+            {
+                Opponent = null;
             }
-        }
-
-        public void RemoveOpponent()
-        {
-            Opponent = null;
-            RPSGame = null;
         }
 
         public User? GetOpponent(Guid userId)
@@ -74,34 +69,37 @@
             return Creator;
         }
 
-        public void StartGame()
+        public void StartGame(Guid userToStart)
         {
-            if (RPSGame != null)
-            {
-                var winner = RPSGame.GetWinner();
-                if (winner != null && CanStart())
-                {
-                    var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!);
-                    var opponentInfo = new PlayerGameInformation(Creator.Id, Opponent.Deck!);
-                    Game = new Game(winner.Value, creatorInfo, opponentInfo);
-                }
-            }
+            var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!);
+            var opponentInfo = new PlayerGameInformation(Creator.Id, Opponent!.Deck!);
+            Game = new Game(userToStart, creatorInfo, opponentInfo);
         }
 
-        public Room Clone()
+        public Guid? GetRPSWinner()
         {
-            return new Room(Creator, Description, Password)
+            if (Creator.RPSChoice != RPSChoice.None && Opponent != null && Opponent.RPSChoice != RPSChoice.None)
             {
-                Id = this.Id,
-                Creator = this.Creator,
-                Opponent = this.Opponent,
-                Password = this.Password,
-                Created = this.Created,
-                Description = this.Description,
-                UsePassword = this.UsePassword,
-                RPSGame = this.RPSGame,
-                Game = this.Game
-            };
+                // Define the relationships between moves
+                int[,] relationships = { { 0, -1, 1 }, { 1, 0, -1 }, { -1, 1, 0 } };
+
+                // Determine winner
+                int creatorIndex = (int)Creator.RPSChoice - 1;
+                int opponentIndex = (int)Opponent.RPSChoice - 1;
+                int result = relationships[creatorIndex, opponentIndex];
+
+                // Return winner id
+                if (result == 1)
+                {
+                    return Creator.Id;
+                }
+                else if (result == -1)
+                {
+                    return Opponent.Id;
+                }
+            }
+
+            return null;
         }
     }
 }

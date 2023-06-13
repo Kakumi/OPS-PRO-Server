@@ -7,7 +7,7 @@ using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
 {
-    internal partial class GameHub : Hub, IGameHub
+    public partial class GameHub : Hub, IGameHub
     {
         protected readonly ILogger<GameHub> _logger;
         protected readonly IRoomManager _roomManager;
@@ -20,7 +20,7 @@ namespace OPS_Pro_Server.Hubs
             _userManager = userManager;
         }
 
-        public async Task<bool> LaunchGame(Guid roomId)
+        public async Task<bool> LaunchRockPaperScissors(Guid roomId)
         {
             try
             {
@@ -29,7 +29,7 @@ namespace OPS_Pro_Server.Hubs
                 {
                     _logger.LogInformation("Start duel for room {RoomId}", roomId);
                     room.State = RoomState.RockPaperScissors;
-                    await Clients.Group(roomId.ToString()).SendAsync(nameof(IGameHubEvent.GameLaunched));
+                    await Clients.Group(roomId.ToString()).SendAsync(nameof(IGameHubEvent.RockPaperScissorsStarted));
                     return true;
                 }
 
@@ -54,20 +54,20 @@ namespace OPS_Pro_Server.Hubs
                     {
                         if (userId == room.Creator.Id)
                         {
-                            room.CreatorRPS = rps;
+                            room.Creator.RPSChoice = rps;
                         }
                         else if (userId == room.Opponent.Id)
                         {
-                            room.OpponentRPS = rps;
+                            room.Opponent.RPSChoice = rps;
                         }
 
-                        if (room.CreatorRPS != RPSChoice.None && room.OpponentRPS != RPSChoice.None)
+                        if (room.Creator.RPSChoice != RPSChoice.None && room.Opponent.RPSChoice != RPSChoice.None)
                         {
                             var dic = new Dictionary<Guid, RPSChoice>();
-                            dic.Add(room.Creator.Id, room.CreatorRPS);
-                            dic.Add(room.Opponent.Id, room.OpponentRPS);
+                            dic.Add(room.Creator.Id, room.Creator.RPSChoice);
+                            dic.Add(room.Opponent.Id, room.Opponent.RPSChoice);
 
-                            var winnerId = room.GetRockPaperScissorsWinner();
+                            var winnerId = room.GetRPSWinner();
 
                             var result = new RPSResult()
                             {
@@ -90,11 +90,11 @@ namespace OPS_Pro_Server.Hubs
                             else
                             {
                                 //If winner is null it's tie, reset values
-                                room.CreatorRPS = RPSChoice.None;
-                                room.OpponentRPS = RPSChoice.None;
+                                room.Creator.RPSChoice = RPSChoice.None;
+                                room.Opponent.RPSChoice = RPSChoice.None;
 
 #if DEBUG
-                                room.OpponentRPS = RPSChoice.Rock;
+                                room.Opponent.RPSChoice = RPSChoice.Paper;
 #endif
                             }
                         }
@@ -111,7 +111,7 @@ namespace OPS_Pro_Server.Hubs
             }
         }
 
-        public async Task<bool> SetFirstPlayer(Guid userId, Guid firstToPlayId)
+        public async Task<bool> LaunchGame(Guid userId, Guid userToStart)
         {
             try
             {
@@ -121,8 +121,9 @@ namespace OPS_Pro_Server.Hubs
                     var room = _roomManager.GetRoom(user);
                     if (room != null && room.Opponent != null)
                     {
-                        room.FirstToPlay = firstToPlayId;
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.FirstPlayerDecided), firstToPlayId);
+                        room.StartGame(userToStart);
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
 
                         return true;
                     }
@@ -130,54 +131,6 @@ namespace OPS_Pro_Server.Hubs
 
                 return false;
             } catch(Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
-        }
-
-        public async Task<bool> SyncBoard(Guid userId, PlaymatSync playmatSync)
-        {
-            try
-            {
-                var user = _userManager.GetUser(userId);
-                if (user != null)
-                {
-                    var room = _roomManager.GetRoom(user);
-                    if (room != null && room.Opponent != null && room.GetOpponent(userId) != null)
-                    {
-                        var opponent = room.GetOpponent(userId);
-                        await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.SyncBoard), playmatSync);
-
-#if DEBUG
-                        await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.SyncBoard), new PlaymatSync()
-                        {
-                            UserId = opponent.Id,
-                            Leader = Guid.NewGuid(),
-                            Life = Guid.NewGuid(),
-                            Deck = Guid.NewGuid(),
-                            Stage = Guid.NewGuid(),
-                            Trash = Guid.NewGuid(),
-                            Cost = Guid.NewGuid(),
-                            DonDeck = Guid.NewGuid(),
-                            Characters = new List<Guid>()
-                            {
-                                Guid.NewGuid(),
-                                Guid.NewGuid(),
-                                Guid.NewGuid(),
-                                Guid.NewGuid(),
-                                Guid.NewGuid()
-                            }
-                        });
-#endif
-
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
                 return false;

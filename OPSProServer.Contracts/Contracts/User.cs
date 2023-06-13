@@ -7,12 +7,17 @@
         public string Username { get; }
         public DateTime Created { get; }
 
-        public User(Guid id, string connectionId, string username)
+        public User(string connectionId, string username)
         {
-            Id = id;
+            Id = Guid.NewGuid();
             ConnectionId = connectionId;
             Username = username;
             Created = DateTime.Now;
+        }
+
+        public override string ToString()
+        {
+            return $"{Username} ({Id})";
         }
     }
 }

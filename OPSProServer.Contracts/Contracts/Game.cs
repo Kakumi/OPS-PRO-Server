@@ -26,5 +26,35 @@ namespace OPSProServer.Contracts.Contracts
             CreatorGameInformation = creatorGameInformation;
             OpponentGameInformation = opponentGameInformation;
         }
+
+        public PlayerGameInformation GetCurrentPlayerGameInformation()
+        {
+            if (PlayerTurn == CreatorGameInformation.UserId)
+            {
+                return CreatorGameInformation;
+            }
+
+            return OpponentGameInformation;
+        }
+
+        public PlayerGameInformation GetMyPlayerInformation(Guid userId)
+        {
+            if (userId == CreatorGameInformation.UserId)
+            {
+                return CreatorGameInformation;
+            }
+
+            return OpponentGameInformation;
+        }
+
+        public PlayerGameInformation GetOpponentPlayerInformation(Guid userId)
+        {
+            if (userId == CreatorGameInformation.UserId)
+            {
+                return OpponentGameInformation;
+            }
+
+            return CreatorGameInformation;
+        }
     }
 }

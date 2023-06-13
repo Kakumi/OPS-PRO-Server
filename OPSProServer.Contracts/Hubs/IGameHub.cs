@@ -9,8 +9,8 @@ namespace OPSProServer.Contracts.Hubs
 {
     public interface IGameHub
     {
-        Task<bool> LaunchGame(Guid roomId);
+        Task<bool> LaunchRockPaperScissors(Guid roomId);
         Task<bool> SetRockPaperScissors(Guid userId, RPSChoice rps);
-        Task<bool> SetFirstPlayer(Guid userId, Guid firstToPlayId);
+        Task<bool> LaunchGame(Guid userId, Guid userToStart);
     }
 }

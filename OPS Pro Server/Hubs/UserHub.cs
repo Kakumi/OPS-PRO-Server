@@ -12,13 +12,12 @@ namespace OPS_Pro_Server.Hubs
         {
             try
             {
-                var guid = Guid.NewGuid();
-                _logger.LogInformation($"Register new user {username} ({guid})");
-                var user = new User(guid, Context.ConnectionId, username);
+                var user = new User(Context.ConnectionId, username);
+                _logger.LogInformation("Register new user {User}", user);
 
                 _userManager.AddUser(user);
 
-                return guid;
+                return user.Id;
             }
             catch (Exception ex)
             {
@@ -32,7 +31,7 @@ namespace OPS_Pro_Server.Hubs
             try
             {
                 var user = _userManager.GetUser(Context.ConnectionId);
-                _logger.LogInformation("User {Username} disconnected ({Id})", user?.Username, user?.Id);
+                _logger.LogInformation("User {User} disconnected", user);
 
                 await LeaveRoom(user);
             }

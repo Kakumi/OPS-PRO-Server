@@ -9,9 +9,10 @@ namespace OPSProServer.Contracts.Events
 {
     public interface IGameHubEvent
     {
-        void GameLaunched();
+        void RockPaperScissorsStarted();
         RPSResult RPSExecuted();
         void ChooseFirstPlayerToPlay();
-        Guid FirstPlayerDecided();
+        Guid GameStarted();
+        Game BoardUpdated();
     }
 }

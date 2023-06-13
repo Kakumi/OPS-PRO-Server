@@ -34,7 +34,7 @@ namespace OPS_Pro_Server.Controllers
                 };
 
                 string allText = System.IO.File.ReadAllText(_config.Value.CardsPath!);
-                var cards = JsonSerializer.Deserialize<List<Card>>(allText, options);
+                var cards = JsonSerializer.Deserialize<List<CardInfo>>(allText, options);
 
                 return new JsonResult(cards);
             } catch(Exception ex)
