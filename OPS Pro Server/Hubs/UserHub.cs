@@ -6,7 +6,7 @@ using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
 {
-    public partial class GameHub : Hub, IUserHub
+    internal partial class GameHub : Hub, IUserHub
     {
         public Guid Register(string username)
         {

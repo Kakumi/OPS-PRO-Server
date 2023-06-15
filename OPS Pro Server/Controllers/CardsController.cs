@@ -11,7 +11,7 @@ namespace OPS_Pro_Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class CardsController : ControllerBase
+    internal class CardsController : ControllerBase
     {
         private readonly ILogger<CardsController> _logger;
         private readonly IOptions<OpsPro> _config;

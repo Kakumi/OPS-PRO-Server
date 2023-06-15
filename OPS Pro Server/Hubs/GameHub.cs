@@ -7,7 +7,7 @@ using OPSProServer.Contracts.Hubs;
 
 namespace OPS_Pro_Server.Hubs
 {
-    public partial class GameHub : Hub, IGameHub
+    internal partial class GameHub : Hub, IGameHub
     {
         protected readonly ILogger<GameHub> _logger;
         protected readonly IRoomManager _roomManager;
