@@ -26,7 +26,6 @@ namespace OPSProServer.Hubs
                 if (room != null && room.CanStart())
                 {
                     _logger.LogInformation("Start duel for room {RoomId}", roomId);
-                    room.State = RoomState.RockPaperScissors;
                     await Clients.Group(roomId.ToString()).SendAsync(nameof(IGameHubEvent.RockPaperScissorsStarted));
                     return true;
                 }

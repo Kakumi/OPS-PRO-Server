@@ -3,7 +3,6 @@
     public enum RoomState
     {
         Created,
-        RockPaperScissors,
         InGame,
         Closed
     }

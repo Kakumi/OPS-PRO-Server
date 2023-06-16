@@ -74,6 +74,7 @@
         {
             var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!);
             var opponentInfo = new PlayerGameInformation(Creator.Id, Opponent!.Deck!);
+            State = RoomState.InGame;
             Game = new Game(userToStart, creatorInfo, opponentInfo);
         }
 
@@ -98,6 +99,19 @@
                 {
                     return Opponent.Id;
                 }
+            }
+
+            return null;
+        }
+
+        public UserRoom? GetUserRoom(User user)
+        {
+            if (Creator.Id == user.Id)
+            {
+                return Creator;
+            } else if (Opponent != null)
+            {
+                return Opponent;
             }
 
             return null;
