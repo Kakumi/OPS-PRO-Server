@@ -7,12 +7,12 @@
 
         public bool Ready => Deck != null;
 
-        internal UserRoom(string connectionId, string username) : base(connectionId, username)
+        internal UserRoom(Guid id, string connectionId, string username) : base(id, connectionId, username)
         {
 
         }
 
-        internal UserRoom(User user) : this(user.ConnectionId, user.Username)
+        internal UserRoom(User user) : this(user.Id, user.ConnectionId, user.Username)
         {
 
         }

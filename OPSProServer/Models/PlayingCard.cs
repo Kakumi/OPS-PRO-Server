@@ -24,5 +24,62 @@
             Destructable = false;
             VisibleForOpponent = false;
         }
+
+        public void ToggleRested()
+        {
+            Rested = !Rested;
+        }
+
+        public void ToggleFlipped()
+        {
+            Flipped = !Flipped;
+        }
+
+        public void ToggleDestructable()
+        {
+            Destructable = !Destructable;
+        }
+
+        public void ToggleVisibleForOpponent()
+        {
+            VisibleForOpponent = !VisibleForOpponent;
+        }
+
+        public int GetCustomPower()
+        {
+            return PowerModifier.Sum(x => x.Value);
+        }
+
+        public int GetTotalPower()
+        {
+            return CardInfo.Power + GetCustomPower();
+        }
+
+        public int GetCustomCost()
+        {
+            return CostModifier.Sum(x => x.Value);
+        }
+
+        public int GetTotalCost()
+        {
+            return CardInfo.Cost + GetCustomCost();
+        }
+
+        public int GetCustomCounter()
+        {
+            return CounterModifier.Sum(x => x.Value);
+        }
+
+        public int GetTotalCounter()
+        {
+            return CardInfo.Counter + GetCustomCounter();
+        }
+
+        public void RemoveStatDuration(ModifierDuration type)
+        {
+            PowerModifier = PowerModifier.Where(x => x.Key != type).ToList();
+            CostModifier = CostModifier.Where(x => x.Key != type).ToList();
+            CounterModifier = CounterModifier.Where(x => x.Key != type).ToList();
+        }
     }
 }

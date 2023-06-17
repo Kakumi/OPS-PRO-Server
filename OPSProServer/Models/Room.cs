@@ -72,8 +72,8 @@
 
         public void StartGame(Guid userToStart)
         {
-            var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!);
-            var opponentInfo = new PlayerGameInformation(Creator.Id, Opponent!.Deck!);
+            var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!, userToStart == Creator.Id ? new RefreshPhase() : new OpponentPhase());
+            var opponentInfo = new PlayerGameInformation(Opponent!.Id, Opponent.Deck!, userToStart == Opponent.Id ? new RefreshPhase() : new OpponentPhase());
             State = RoomState.InGame;
             Game = new Game(userToStart, creatorInfo, opponentInfo);
         }

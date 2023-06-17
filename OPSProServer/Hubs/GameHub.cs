@@ -111,10 +111,53 @@ namespace OPSProServer.Hubs
                     if (room != null && room.Opponent != null)
                     {
                         room.StartGame(userToStart);
+                        room.Game!.PhaseChanged += Game_PhaseChanged;
+
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
 
+                        if (room.Game.GetCurrentPlayerGameInformation().CurrentPhase.IsAutoNextPhase())
+                        {
+                            await room.Game.UpdatePhase();
+                        }
+
                         return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return false;
+            }
+        }
+
+        private async void Game_PhaseChanged(object? sender, PhaseChangedArgs e)
+        {
+            if (e.NewPhaseType == PhaseType.Draw)
+            {
+
+            }
+
+            e.Task.SetResult(true);
+        }
+
+        public async Task<bool> NextPhase(Guid userId)
+        {
+            try
+            {
+                var user = _userManager.GetUser(userId);
+                if (user != null)
+                {
+                    var room = _roomManager.GetRoom(user);
+                    if (room != null && room.Opponent != null && room.Game != null)
+                    {
+                        if (room.Game.PlayerTurn == userId)
+                        {
+
+                        }
                     }
                 }
 

@@ -15,6 +15,14 @@
             Created = DateTime.Now;
         }
 
+        internal User(Guid id, string connectionId, string username)
+        {
+            Id = id;
+            ConnectionId = connectionId;
+            Username = username;
+            Created = DateTime.Now;
+        }
+
         public override string ToString()
         {
             return $"{Username} ({Id})";

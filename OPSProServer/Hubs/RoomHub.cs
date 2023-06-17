@@ -142,18 +142,25 @@ namespace OPSProServer.Hubs
                     var room = _roomManager.GetRoom(user);
                     if (room != null)
                     {
-                        var ready = deckInfo != null;
+                        if (deckInfo == null || !deckInfo.IsValid())
+                        {
+                            return false;
+                        }
 
                         var userRoom = room.GetUserRoom(user);
                         if (userRoom != null)
                         {
-                            _logger.LogInformation("Update status for the creator {UserId} to {Ready}.", userId, ready);
+                            _logger.LogInformation("Update status for the creator {UserId} to {Ready}.", userId, true);
                             userRoom.Deck = deckInfo;
                         }
 
+#if DEBUG
+                        room.Opponent!.Deck = deckInfo;
+#endif
+
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
 
-                        return ready;
+                        return true;
                     }
                     else
                     {

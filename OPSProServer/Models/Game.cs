@@ -9,6 +9,7 @@
         public Guid FirstToPlay { get; private set; }
         public PlayerGameInformation CreatorGameInformation { get; private set; }
         public PlayerGameInformation OpponentGameInformation { get; private set; }
+        public event EventHandler<PhaseChangedArgs>? PhaseChanged;
 
         internal Game(Guid firstToPlay, PlayerGameInformation creatorGameInformation, PlayerGameInformation opponentGameInformation)
         {
@@ -19,6 +20,32 @@
             FirstToPlay = firstToPlay;
             CreatorGameInformation = creatorGameInformation;
             OpponentGameInformation = opponentGameInformation;
+
+            CreatorGameInformation.CurrentPhase.OnPhaseStarted(this);
+            OpponentGameInformation.CurrentPhase.OnPhaseStarted(this);
+        }
+
+        public async Task UpdatePhase()
+        {
+            var currentPlayerInfo = GetCurrentPlayerGameInformation();
+            var oldPhase = currentPlayerInfo.CurrentPhase;
+            var newPhase = currentPlayerInfo.CurrentPhase.NextPhase();
+
+            currentPlayerInfo.CurrentPhase.OnPhaseEnded(this);
+            currentPlayerInfo.CurrentPhase = newPhase;
+            currentPlayerInfo.CurrentPhase.OnPhaseStarted(this);
+
+            if (PhaseChanged != null)
+            {
+                var args = new PhaseChangedArgs(oldPhase.PhaseType, newPhase.PhaseType, this);
+                PhaseChanged.Invoke(this, args);
+                await args.Task.Task;
+            }
+
+            if (currentPlayerInfo.CurrentPhase.IsAutoNextPhase())
+            {
+                await UpdatePhase();
+            }
         }
 
         public PlayerGameInformation GetCurrentPlayerGameInformation()
@@ -49,6 +76,11 @@
             }
 
             return CreatorGameInformation;
+        }
+
+        public void IncrementTurn()
+        {
+            Turn++;
         }
     }
 }

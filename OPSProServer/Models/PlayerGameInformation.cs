@@ -20,12 +20,41 @@ namespace OPSProServer.Models
         public PlayingCard? Character5 { get; private set; }
         public PlayingCard? Stage { get; private set; }
         public PlayingCard Leader { get; private set; }
-        public string CurrentPhase { get; private set; }
-        public string NextPhase { get; private set; }
+        public IPhase CurrentPhase { get; internal set; }
+
+        public List<PlayingCard> Characters
+        {
+            get
+            {
+                var list = new List<PlayingCard>();
+                if (Character1 != null)
+                {
+                    list.Add(Character1);
+                }
+                if (Character2 != null)
+                {
+                    list.Add(Character2);
+                }
+                if (Character3 != null)
+                {
+                    list.Add(Character3);
+                }
+                if (Character4 != null)
+                {
+                    list.Add(Character4);
+                }
+                if (Character5 != null)
+                {
+                    list.Add(Character5);
+                }
+
+                return list;
+            }
+        }
 
         public bool HasRedrawn { get; private set; }
 
-        internal PlayerGameInformation(Guid userId, DeckInfo selectedDeck)
+        internal PlayerGameInformation(Guid userId, DeckInfo selectedDeck, IPhase phase)
         {
             HasRedrawn = false;
 
@@ -44,8 +73,9 @@ namespace OPSProServer.Models
             Character4 = null;
             Character5 = null;
             Stage = null;
+            CurrentPhase = phase;
 
-            var leaderCard = selectedDeck.Cards.First(x => x.Key.CardCategory == CardCategory.LEADER).Key;
+            var leaderCard = selectedDeck.GetLeader();
 
             Leader = new PlayingCard(leaderCard);
 
@@ -54,14 +84,11 @@ namespace OPSProServer.Models
 
         private void Initialize(DeckInfo deck)
         {
-            var leaderCard = deck.Cards.First(x => x.Key.CardCategory == CardCategory.LEADER).Key;
-            var deckCards = deck.Cards.Where(x => x.Key.CardCategory == CardCategory.CHARACTER || x.Key.CardCategory == CardCategory.STAGE || x.Key.CardCategory == CardCategory.EVENT);
+            var leaderCard = deck.GetLeader();
+            var deckCards = deck.GetCards();
             foreach (var deckCard in deckCards)
             {
-                for (int i = 0; i < deckCard.Value; i++)
-                {
-                    AddDeckCard(new PlayingCard(deckCard.Key));
-                }
+                AddDeckCard(new PlayingCard(deckCard));
             }
 
             ShuffleDeck();

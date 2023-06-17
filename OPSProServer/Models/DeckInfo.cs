@@ -1,51 +1,58 @@
-﻿namespace OPSProServer.Models
+﻿using Microsoft.VisualBasic;
+
+namespace OPSProServer.Models
 {
     public class DeckInfo
     {
-        public Guid Id { get; }
+        public Guid Id { get; set; }
         public string Name { get; set; }
-        public Dictionary<CardInfo, int> Cards { get; private set; }
+        public List<CardInfo> Cards { get; set; }
 
-        internal DeckInfo(string name)
+        public DeckInfo(string name)
         {
             Id = Guid.NewGuid();
             Name = name;
-            Cards = new Dictionary<CardInfo, int>();
+            Cards = new List<CardInfo>();
         }
 
         public void AddCard(CardInfo cardInfo, int amount = 1)
         {
-            if (!Cards.ContainsKey(cardInfo))
-            {
-                Cards.Add(cardInfo, 0);
-            }
-
-            Cards[cardInfo] += amount;
+            Cards.AddRange(Enumerable.Repeat(cardInfo, amount));
         }
 
         public void RemoveCard(CardInfo cardInfo, int amount = 1)
         {
-            if (Cards.ContainsKey(cardInfo))
-            {
-                Cards[cardInfo] -= amount;
-                if (Cards[cardInfo] <= 0)
-                {
-                    Cards.Remove(cardInfo);
-                }
-            }
+            //if (Cards.Contains(cardInfo))
+            //{
+            //    Cards[cardInfo] -= amount;
+            //    if (Cards[cardInfo] <= 0)
+            //    {
+            //        Cards.Remove(cardInfo);
+            //    }
+            //}
         }
 
-        public int NumberOfCards => Cards.Sum(x => x.Value);
+        public int NumberOfCards => Cards.Count;
 
         public int NumberOfCardsTypes(params CardCategory[] types)
         {
-            return Cards.Where(x => types.Contains(x.Key.CardCategory)).Sum(x => x.Value);
+            return Cards.Where(x => types.Contains(x.CardCategory)).Count();
+        }
+
+        public CardInfo? GetLeader()
+        {
+            return Cards.FirstOrDefault(x => x.CardCategory == CardCategory.LEADER);
+        }
+
+        public List<CardInfo> GetCards()
+        {
+            return Cards.Where(x => x.CardCategory == CardCategory.CHARACTER || x.CardCategory == CardCategory.STAGE || x.CardCategory == CardCategory.EVENT).ToList();
         }
 
         public DeckInfo Clone(string name)
         {
             var deck = new DeckInfo(name);
-            deck.Cards = new Dictionary<CardInfo, int>(Cards.ToDictionary(entry => entry.Key, entry => entry.Value));
+            deck.Cards = new List<CardInfo>(Cards.ToList());
 
             return deck;
         }
@@ -54,9 +61,9 @@
         {
             var totalCards = NumberOfCardsTypes(CardCategory.CHARACTER, CardCategory.EVENT, CardCategory.STAGE);
             var totalLeader = NumberOfCardsTypes(CardCategory.LEADER);
-            var leader = Cards.FirstOrDefault(x => x.Key.CardCategory == CardCategory.LEADER).Key;
+            var leader = Cards.FirstOrDefault(x => x.CardCategory == CardCategory.LEADER);
 
-            return totalCards == 50 && totalLeader == 1 && leader != null && Cards.All(x => x.Key.Colors.Any(y => leader.Colors.Contains(y)));
+            return totalCards == 50 && totalLeader == 1 && leader != null && Cards.All(x => x.Colors.Any(y => leader.Colors.Contains(y)));
         }
     }
 }
