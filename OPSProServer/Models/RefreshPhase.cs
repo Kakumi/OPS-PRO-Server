@@ -2,23 +2,23 @@
 
 public class RefreshPhase : IPhase
 {
-    public PhaseType PhaseType => PhaseType.Refresh;
+    public override PhaseType PhaseType => PhaseType.Refresh;
 
-    public bool IsActionAllowed(CardSource source, CardAction action)
+    public override bool IsActionAllowed(CardSource source, CardAction action)
     {
         return action == CardAction.See;
     }
 
-    public IPhase NextPhase()
+    public override IPhase NextPhase()
     {
         return new DrawPhase();
     }
 
-    public void OnPhaseEnded(Game game)
+    public override void OnPhaseEnded(Game game)
     {
     }
 
-    public void OnPhaseStarted(Game game)
+    public override void OnPhaseStarted(Game game)
     {
         var playerInfo = game.GetCurrentPlayerGameInformation();
 
@@ -28,7 +28,7 @@ public class RefreshPhase : IPhase
         }
 
         playerInfo.UnrestCostDeck();
-        playerInfo.Characters.ForEach(x =>
+        playerInfo.GetCharacters().ForEach(x =>
         {
             x.Rested = false;
             x.RemoveStatDuration(ModifierDuration.OpponentTurn);
@@ -38,7 +38,7 @@ public class RefreshPhase : IPhase
         playerInfo.Leader.RemoveStatDuration(ModifierDuration.OpponentTurn);
     }
 
-    public bool IsAutoNextPhase()
+    public override bool IsAutoNextPhase()
     {
         return true;
     }

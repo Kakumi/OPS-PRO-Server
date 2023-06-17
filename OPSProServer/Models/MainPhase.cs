@@ -2,28 +2,28 @@
 
 public class MainPhase : IPhase
 {
-    public PhaseType PhaseType => PhaseType.Main;
+    public override PhaseType PhaseType => PhaseType.Main;
 
-    public bool IsActionAllowed(CardSource source, CardAction action)
+    public override bool IsActionAllowed(CardSource source, CardAction action)
     {
         return true;
     }
 
 
-    public IPhase NextPhase()
+    public override IPhase NextPhase()
     {
         return new EndPhase();
     }
 
-    public void OnPhaseEnded(Game game)
+    public override void OnPhaseEnded(Game game)
     {
     }
 
-    public void OnPhaseStarted(Game game)
+    public override void OnPhaseStarted(Game game)
     {
     }
 
-    public bool IsAutoNextPhase()
+    public override bool IsAutoNextPhase()
     {
         return false;
     }

@@ -2,23 +2,23 @@
 
 public class EndPhase : IPhase
 {
-    public PhaseType PhaseType => PhaseType.End;
+    public override PhaseType PhaseType => PhaseType.End;
 
-    public bool IsActionAllowed(CardSource source, CardAction action)
+    public override bool IsActionAllowed(CardSource source, CardAction action)
     {
         return action == CardAction.See;
     }
 
-    public IPhase NextPhase()
+    public override IPhase NextPhase()
     {
         return new RefreshPhase(); //new OpponentPhase();
     }
 
-    public void OnPhaseEnded(Game game)
+    public override void OnPhaseEnded(Game game)
     {
         var playerInfo = game.GetCurrentPlayerGameInformation();
 
-        playerInfo.Characters.ForEach(x =>
+        playerInfo.GetCharacters().ForEach(x =>
         {
             x.RemoveStatDuration(ModifierDuration.Turn);
         });
@@ -26,7 +26,7 @@ public class EndPhase : IPhase
         playerInfo.Leader.RemoveStatDuration(ModifierDuration.Turn);
     }
 
-    public void OnPhaseStarted(Game game)
+    public override void OnPhaseStarted(Game game)
     {
         //PlayerArea opponentArea;
         //if (playerArea.Gameboard.PlayerArea == playerArea)
@@ -40,7 +40,7 @@ public class EndPhase : IPhase
         //opponentArea.UpdatePhase(new DrawPhase());
     }
 
-    public bool IsAutoNextPhase()
+    public override bool IsAutoNextPhase()
     {
         return true;
     }

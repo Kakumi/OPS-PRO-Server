@@ -2,17 +2,17 @@
 {
     public class PlayingCard
     {
-        public Guid Id { get; }
-        public CardInfo CardInfo { get; }
-        public List<KeyValuePair<ModifierDuration, int>> CostModifier { get; private set; }
-        public List<KeyValuePair<ModifierDuration, int>> CounterModifier { get; private set; }
-        public List<KeyValuePair<ModifierDuration, int>> PowerModifier { get; private set; }
-        public bool Rested { get; internal set; }
-        public bool Flipped { get; internal set; }
-        public bool Destructable { get; internal set; }
-        public bool VisibleForOpponent { get; internal set; }
+        public Guid Id { get; set; }
+        public CardInfo CardInfo { get; set; }
+        public List<KeyValuePair<ModifierDuration, int>> CostModifier { get; set; }
+        public List<KeyValuePair<ModifierDuration, int>> CounterModifier { get; set; }
+        public List<KeyValuePair<ModifierDuration, int>> PowerModifier { get; set; }
+        public bool Rested { get; set; }
+        public bool Flipped { get; set; }
+        public bool Destructable { get; set; }
+        public bool VisibleForOpponent { get; set; }
 
-        internal PlayingCard(CardInfo cardInfo)
+        public PlayingCard(CardInfo cardInfo)
         {
             Id = Guid.NewGuid();
             CardInfo = cardInfo;

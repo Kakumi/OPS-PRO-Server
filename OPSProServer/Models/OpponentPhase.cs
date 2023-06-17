@@ -3,28 +3,28 @@ using OPSProServer.Models;
 
 public class OpponentPhase : IPhase
 {
-    public PhaseType PhaseType => PhaseType.Opponent;
+    public override PhaseType PhaseType => PhaseType.Opponent;
 
-    public bool IsActionAllowed(CardSource source, CardAction action)
+    public override bool IsActionAllowed(CardSource source, CardAction action)
     {
         return action == CardAction.See;
     }
 
 
-    public IPhase NextPhase()
+    public override IPhase NextPhase()
     {
         throw new UnauthorizedOperationException("update this phase");
     }
 
-    public void OnPhaseEnded(Game game)
+    public override void OnPhaseEnded(Game game)
     {
     }
 
-    public void OnPhaseStarted(Game game)
+    public override void OnPhaseStarted(Game game)
     {
     }
 
-    public bool IsAutoNextPhase()
+    public override bool IsAutoNextPhase()
     {
         return false;
     }

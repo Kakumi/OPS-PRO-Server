@@ -1,12 +1,12 @@
 ﻿namespace OPSProServer.Models
 {
-    public interface IPhase
+    public class IPhase
     {
-        PhaseType PhaseType { get; }
-        void OnPhaseStarted(Game game);
-        void OnPhaseEnded(Game game);
-        bool IsActionAllowed(CardSource source, CardAction action);
-        IPhase NextPhase();
-        bool IsAutoNextPhase();
+        public virtual PhaseType PhaseType => PhaseType.Don;
+        public virtual void OnPhaseStarted(Game game) { }
+        public virtual void OnPhaseEnded(Game game) { }
+        public virtual bool IsActionAllowed(CardSource source, CardAction action) { return false; }
+        public virtual IPhase NextPhase() { return null; }
+        public virtual bool IsAutoNextPhase() { return false; }
     }
 }

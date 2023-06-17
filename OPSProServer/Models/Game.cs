@@ -2,16 +2,21 @@
 {
     public class Game
     {
-        public Guid Id { get; }
-        public GameState State { get; private set; }
-        public int Turn { get; private set; }
-        public Guid PlayerTurn { get; private set; }
-        public Guid FirstToPlay { get; private set; }
-        public PlayerGameInformation CreatorGameInformation { get; private set; }
-        public PlayerGameInformation OpponentGameInformation { get; private set; }
+        public Guid Id { get; set; }
+        public GameState State { get; set; }
+        public int Turn { get; set; }
+        public Guid PlayerTurn { get; set; }
+        public Guid FirstToPlay { get; set; }
+        public PlayerGameInformation CreatorGameInformation { get; set; }
+        public PlayerGameInformation OpponentGameInformation { get; set; }
         public event EventHandler<PhaseChangedArgs>? PhaseChanged;
 
-        internal Game(Guid firstToPlay, PlayerGameInformation creatorGameInformation, PlayerGameInformation opponentGameInformation)
+        public Game()
+        {
+
+        }
+
+        public Game(Guid firstToPlay, PlayerGameInformation creatorGameInformation, PlayerGameInformation opponentGameInformation)
         {
             Id = Guid.NewGuid();
             State = GameState.Starting;

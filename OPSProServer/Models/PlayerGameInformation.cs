@@ -4,57 +4,60 @@ namespace OPSProServer.Models
 {
     public class PlayerGameInformation
     {
-        public Guid UserId { get; }
-        public DeckInfo SelectedDeck { get; }
-        public List<PlayingCard> Deck { get; private set; }
-        public Stack<PlayingCard> Lifes { get; private set; }
-        public List<PlayingCard> Trash { get; private set; }
-        public List<PlayingCard> Hand { get; private set; }
-        public int DonDeck { get; private set; }
-        public int DonAvailable { get; private set; }
-        public int DonRested { get; private set; }
-        public PlayingCard? Character1 { get; private set; }
-        public PlayingCard? Character2 { get; private set; }
-        public PlayingCard? Character3 { get; private set; }
-        public PlayingCard? Character4 { get; private set; }
-        public PlayingCard? Character5 { get; private set; }
-        public PlayingCard? Stage { get; private set; }
-        public PlayingCard Leader { get; private set; }
-        public IPhase CurrentPhase { get; internal set; }
+        public Guid UserId { get; set; }
+        public DeckInfo SelectedDeck { get; set; }
+        public List<PlayingCard> Deck { get; set; }
+        public Stack<PlayingCard> Lifes { get; set; }
+        public List<PlayingCard> Trash { get; set; }
+        public List<PlayingCard> Hand { get; set; }
+        public int DonDeck { get; set; }
+        public int DonAvailable { get; set; }
+        public int DonRested { get; set; }
+        public PlayingCard? Character1 { get; set; }
+        public PlayingCard? Character2 { get; set; }
+        public PlayingCard? Character3 { get; set; }
+        public PlayingCard? Character4 { get; set; }
+        public PlayingCard? Character5 { get; set; }
+        public PlayingCard? Stage { get; set; }
+        public PlayingCard Leader { get; set; }
+        public IPhase CurrentPhase { get; set; }
 
-        public List<PlayingCard> Characters
+
+        public bool HasRedrawn { get; set; }
+
+        public List<PlayingCard> GetCharacters()
         {
-            get
+            var list = new List<PlayingCard>();
+            if (Character1 != null)
             {
-                var list = new List<PlayingCard>();
-                if (Character1 != null)
-                {
-                    list.Add(Character1);
-                }
-                if (Character2 != null)
-                {
-                    list.Add(Character2);
-                }
-                if (Character3 != null)
-                {
-                    list.Add(Character3);
-                }
-                if (Character4 != null)
-                {
-                    list.Add(Character4);
-                }
-                if (Character5 != null)
-                {
-                    list.Add(Character5);
-                }
-
-                return list;
+                list.Add(Character1);
             }
+            if (Character2 != null)
+            {
+                list.Add(Character2);
+            }
+            if (Character3 != null)
+            {
+                list.Add(Character3);
+            }
+            if (Character4 != null)
+            {
+                list.Add(Character4);
+            }
+            if (Character5 != null)
+            {
+                list.Add(Character5);
+            }
+
+            return list;
         }
 
-        public bool HasRedrawn { get; private set; }
+        public PlayerGameInformation()
+        {
 
-        internal PlayerGameInformation(Guid userId, DeckInfo selectedDeck, IPhase phase)
+        }
+
+        public PlayerGameInformation(Guid userId, DeckInfo selectedDeck, IPhase phase)
         {
             HasRedrawn = false;
 

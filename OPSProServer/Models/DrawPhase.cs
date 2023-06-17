@@ -2,23 +2,23 @@
 
 public class DrawPhase : IPhase
 {
-    public PhaseType PhaseType => PhaseType.Draw;
+    public override PhaseType PhaseType => PhaseType.Draw;
 
-    public bool IsActionAllowed(CardSource source, CardAction action)
+    public override bool IsActionAllowed(CardSource source, CardAction action)
     {
         return action == CardAction.See;
     }
 
-    public IPhase NextPhase()
+    public override IPhase NextPhase()
     {
         return new DonPhase();
     }
 
-    public void OnPhaseEnded(Game game)
+    public override void OnPhaseEnded(Game game)
     {
     }
 
-    public void OnPhaseStarted(Game game)
+    public override void OnPhaseStarted(Game game)
     {
         var playerInfo = game.GetCurrentPlayerGameInformation();
 
@@ -28,7 +28,7 @@ public class DrawPhase : IPhase
         }
     }
 
-    public bool IsAutoNextPhase()
+    public override bool IsAutoNextPhase()
     {
         return true;
     }
