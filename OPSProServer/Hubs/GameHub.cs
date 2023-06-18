@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using OPSProServer.Events;
+using OPSProServer.Contracts.Events;
 using OPSProServer.Managers;
-using OPSProServer.Models;
+using OPSProServer.Contracts.Models;
+using OPSProServer.Contracts.Hubs;
 
 namespace OPSProServer.Hubs
 {
@@ -116,7 +117,7 @@ namespace OPSProServer.Hubs
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
 
-                        if (room.Game.GetCurrentPlayerGameInformation().CurrentPhase.IsAutoNextPhase())
+                        if (room.Game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
                         {
                             await room.Game.UpdatePhase();
                         }

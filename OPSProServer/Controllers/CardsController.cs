@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using OPSProServer.Contracts.Models;
 using OPSProServer.Models;
 using System.Text.Json;
 

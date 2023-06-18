@@ -5,6 +5,8 @@ VisualStudioVersion = 17.1.32407.343
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OPSProServer", "OPSProServer\OPSProServer.csproj", "{C34096FA-0CA4-4699-AD77-89BF4BE662E7}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OPSProServer.Contracts", "OPSProServer.Contracts\OPSProServer.Contracts.csproj", "{24F4B988-17B0-46F6-B324-4A1916B493BB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{C34096FA-0CA4-4699-AD77-89BF4BE662E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C34096FA-0CA4-4699-AD77-89BF4BE662E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C34096FA-0CA4-4699-AD77-89BF4BE662E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24F4B988-17B0-46F6-B324-4A1916B493BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24F4B988-17B0-46F6-B324-4A1916B493BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24F4B988-17B0-46F6-B324-4A1916B493BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24F4B988-17B0-46F6-B324-4A1916B493BB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using OPSProServer.Events;
-using OPSProServer.Models;
+using OPSProServer.Contracts.Events;
+using OPSProServer.Contracts.Hubs;
+using OPSProServer.Contracts.Models;
 
 namespace OPSProServer.Hubs
 {
