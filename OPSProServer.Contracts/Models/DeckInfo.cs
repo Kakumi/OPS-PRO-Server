@@ -59,6 +59,11 @@ namespace OPSProServer.Contracts.Models
             return Cards.Where(x => types.Contains(x.CardCategory)).Count();
         }
 
+        public int NumberOfCardsId(string id)
+        {
+            return Cards.Count(x => x.Id == id);
+        }
+
         public CardInfo? GetLeader()
         {
             return Cards.FirstOrDefault(x => x.CardCategory == CardCategory.LEADER);
@@ -82,8 +87,9 @@ namespace OPSProServer.Contracts.Models
             var totalCards = NumberOfCardsTypes(CardCategory.CHARACTER, CardCategory.EVENT, CardCategory.STAGE);
             var totalLeader = NumberOfCardsTypes(CardCategory.LEADER);
             var leader = Cards.FirstOrDefault(x => x.CardCategory == CardCategory.LEADER);
+            var exceedsSameCard = Cards.Any(x => NumberOfCardsId(x.Id) > 4);
 
-            return totalCards == 50 && totalLeader == 1 && leader != null && Cards.All(x => x.Colors.Any(y => leader.Colors.Contains(y)));
+            return totalCards == 50 && totalLeader == 1 && leader != null && !exceedsSameCard && Cards.All(x => x.Colors.Any(y => leader.Colors.Contains(y)));
         }
     }
 }
