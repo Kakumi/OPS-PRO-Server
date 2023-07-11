@@ -5,7 +5,7 @@ using OPSProServer.Contracts.Models;
 
 namespace OPSProServer.Hubs
 {
-    internal partial class GameHub : Hub, IRoomHub
+    public partial class GameHub : Hub, IRoomHub
     {
         public async Task<bool> CreateRoom(Guid id, string? password, string? description)
         {
