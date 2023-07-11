@@ -14,6 +14,7 @@ namespace OPSProServer.Contracts.Models
 
         public IPhase NextPhase()
         {
+            //Idea ? Allow change phase BUT block it client and server side
             throw new UnauthorizedOperationException("update this phase");
         }
 

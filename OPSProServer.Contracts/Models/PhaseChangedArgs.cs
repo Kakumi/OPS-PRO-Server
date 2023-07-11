@@ -8,14 +8,14 @@ namespace OPSProServer.Contracts.Models
         public PhaseType OldPhaseType { get; }
         public PhaseType NewPhaseType { get; }
         public Game Game { get; }
-        public TaskCompletionSource<bool> Task { get; }
+        public TaskCompletionSource<bool> WaitCompletion { get; }
 
         public PhaseChangedArgs(PhaseType oldPhaseType, PhaseType newPhaseType, Game game)
         {
             OldPhaseType = oldPhaseType;
             NewPhaseType = newPhaseType;
             Game = game;
-            Task = new TaskCompletionSource<bool>();
+            WaitCompletion = new TaskCompletionSource<bool>();
         }
     }
 }

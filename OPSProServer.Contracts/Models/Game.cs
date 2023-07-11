@@ -55,7 +55,7 @@ namespace OPSProServer.Contracts.Models
             {
                 var args = new PhaseChangedArgs(oldPhase.PhaseType, newPhase.PhaseType, this);
                 PhaseChanged.Invoke(this, args);
-                await args.Task.Task;
+                await args.WaitCompletion.Task;
             }
 
             if (currentPlayerInfo.CurrentPhase.IsAutoNextPhase())

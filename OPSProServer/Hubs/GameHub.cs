@@ -111,15 +111,15 @@ namespace OPSProServer.Hubs
                     var room = _roomManager.GetRoom(user);
                     if (room != null && room.Opponent != null)
                     {
-                        room.StartGame(userToStart);
-                        room.Game!.PhaseChanged += Game_PhaseChanged;
+                        var game = room.StartGame(userToStart);
+                        game.PhaseChanged += Game_PhaseChanged;
 
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), game);
 
-                        if (room.Game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
+                        if (game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
                         {
-                            await room.Game.UpdatePhase();
+                            await game.UpdatePhase();
                         }
 
                         return true;
@@ -137,12 +137,31 @@ namespace OPSProServer.Hubs
 
         private async void Game_PhaseChanged(object? sender, PhaseChangedArgs e)
         {
-            if (e.NewPhaseType == PhaseType.Draw)
+            try
             {
+                var user = _userManager.GetUser(e.Game.PlayerTurn);
+                if (user != null)
+                {
+                    var room = _roomManager.GetRoom(user);
 
+                    if (room != null)
+                    {
+                        if (e.NewPhaseType == PhaseType.Draw)
+                        {
+
+                        }
+
+                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), e.Game);
+                    }
+                }
             }
-
-            e.Task.SetResult(true);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+            } finally
+            {
+                e.WaitCompletion.SetResult(true);
+            }
         }
 
         public async Task<bool> NextPhase(Guid userId)
@@ -157,7 +176,7 @@ namespace OPSProServer.Hubs
                     {
                         if (room.Game.PlayerTurn == userId)
                         {
-
+                            await room.Game.UpdatePhase();
                         }
                     }
                 }
