@@ -1,19 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace OPSProServer.Contracts.Models
 {
     public class Room
     {
-        public Guid Id { get; set; }
-        public RoomState State { get; set; }
-        public UserRoom Creator { get; set; }
-        public UserRoom? Opponent { get; set; }
-        public DateTime Created { get; set; }
-        public bool UsePassword { get; set; }
-        public string? Password { get; set; }
-        public string? Description { get; set; }
-        public Game? Game { get; set; }
+        public Guid Id { get; private set; }
+        public RoomState State { get; private set; }
+        public UserRoom Creator { get; private set; }
+        public UserRoom? Opponent { get; private set; }
+        public DateTime Created { get; private set; }
+        public bool UsePassword { get; private set; }
+        public string? Password { get; private set; }
+        public string? Description { get; private set; }
+        public Game? Game { get; private set; }
 
         public Room(User user, string? description = null, string? password = null)
         {
@@ -73,12 +74,13 @@ namespace OPSProServer.Contracts.Models
             return Creator;
         }
 
-        public void StartGame(Guid userToStart)
+        public Game StartGame(Guid userToStart)
         {
             var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Deck!, userToStart == Creator.Id ? new RefreshPhase() : new OpponentPhase());
             var opponentInfo = new PlayerGameInformation(Opponent!.Id, Opponent.Deck!, userToStart == Opponent.Id ? new RefreshPhase() : new OpponentPhase());
             State = RoomState.InGame;
             Game = new Game(userToStart, creatorInfo, opponentInfo);
+            return Game;
         }
 
         public Guid? GetRPSWinnerId()
