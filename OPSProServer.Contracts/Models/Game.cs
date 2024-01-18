@@ -13,6 +13,7 @@ namespace OPSProServer.Contracts.Models
         public Guid FirstToPlay { get; private set; }
         public PlayerGameInformation CreatorGameInformation { get; private set; }
         public PlayerGameInformation OpponentGameInformation { get; private set; }
+
         public event EventHandler<PhaseChangedArgs>? PhaseChanged;
 
         [JsonConstructor]
