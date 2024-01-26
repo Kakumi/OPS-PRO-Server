@@ -10,6 +10,7 @@ namespace OPSProServer.Contracts.Models
     public class PlayerGameInformation
     {
         public Guid UserId { get; private set; }
+        public string Username { get; private set; }
         public DeckInfo SelectedDeck { get; private set; }
         public List<PlayingCard> Deck { get; private set; }
         public Stack<PlayingCard> Lifes { get; private set; }
@@ -53,9 +54,10 @@ namespace OPSProServer.Contracts.Models
         }
 
         [JsonConstructor]
-        public PlayerGameInformation(Guid userId, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard? character1, PlayingCard? character2, PlayingCard? character3, PlayingCard? character4, PlayingCard? character5, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
+        public PlayerGameInformation(Guid userId, string username, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard? character1, PlayingCard? character2, PlayingCard? character3, PlayingCard? character4, PlayingCard? character5, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
         {
             UserId = userId;
+            Username = username;
             SelectedDeck = selectedDeck;
             Deck = deck;
             Lifes = lifes;
@@ -77,11 +79,12 @@ namespace OPSProServer.Contracts.Models
 
         public bool HasRedrawn { get; set; }
 
-        public PlayerGameInformation(Guid userId, DeckInfo selectedDeck, IPhase phase)
+        public PlayerGameInformation(Guid userId, string username, DeckInfo selectedDeck, IPhase phase)
         {
             HasRedrawn = false;
 
             UserId = userId;
+            Username = username;
             SelectedDeck = selectedDeck;
             Deck = new List<PlayingCard>();
             Lifes = new Stack<PlayingCard>();

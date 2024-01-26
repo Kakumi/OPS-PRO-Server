@@ -8,7 +8,7 @@ namespace OPSProServer.Contracts.Events
         /// Event when a room is updated (ready, join, left)
         /// </summary>
         /// <returns></returns>
-        Room RoomUpdated();
+        SecureRoom RoomUpdated();
 
         /// <summary>
         /// Event when a room is deleted

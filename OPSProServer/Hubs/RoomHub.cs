@@ -46,7 +46,7 @@ namespace OPSProServer.Hubs
             try
             {
                 //Remove password from room
-                var rooms = _roomManager.GetRooms().Select(x => new SecureRoom(x)).ToList();
+                var rooms = _roomManager.GetRooms().Select(x => x as SecureRoom).ToList();
                 return Task.FromResult(rooms);
             }
             catch (Exception ex)
@@ -218,7 +218,7 @@ namespace OPSProServer.Hubs
                 var room = _roomManager.GetRoom(user);
                 if (room != null)
                 {
-                    return Task.FromResult(new SecureRoom(room));
+                    return Task.FromResult((SecureRoom) room);
                 }
             }
 

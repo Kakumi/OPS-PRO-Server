@@ -146,6 +146,30 @@ namespace OPSProServer.Hubs
 
                     if (room != null)
                     {
+                        //Idée:
+                        //Pour la gestion des events de cartes:
+                        //1. On va regarder les cartes des joueurs et voir si sur base de l'action
+                        //on peut appliquer quelque chose
+                        //2. Si oui, on va créer une "requête" avec un ID et l'envoyer au joueur
+                        //3. Le joueur réagit ou pas
+                        //  Si sa impliquer un autre joueur alors on va créer une autre requête avec un autre ID pour connaître la hiérarchie
+                        //  De cette manière à force on va forcément devoir revenir en arrière et revenir à la requête d'origine.
+                        //  Pour matérialisé ça, on peut avoir un "stack" dans la game qui contient la liste des requêtes
+                        //  entre les deux joueurs, quand la liste est vide alors on peut continuer le fonctionnement et mettre
+                        //  a jour le board (peut-être avoir un event quand chaque requête est crée / finie)
+                        //4. Le processus continue et on change de phase / action
+                        //Pour faire ça il faudrait une méthode :
+                        //  async Task CheckUserInputs qui notifie un joueur qu'il peut réagir et choisir avec quoi il veut réagir
+                        //Type d'action:
+                        //  - Attaque
+                        //  - Fin de tour
+                        //  - Début de tour
+                        //  - Début de manche X
+                        //  - Fin de manche X
+                        //  - Draw
+
+                        //Comme la gestion des cartes ne sera pas asynchrone il faudra renvoyer un type d'action à faire depuis le serveur
+                        //Du genre, demander à l'adversaire de supprimer une carte
                         if (e.NewPhaseType == PhaseType.Draw)
                         {
 
