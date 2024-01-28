@@ -34,5 +34,13 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userToStart"></param>
         /// <returns></returns>
         Task<bool> LaunchGame(Guid userId, Guid userToStart);
+
+        /// <summary>
+        /// <para>Tell the server the user want to go to next phase.</para>
+        /// <para>This method will fire <see cref="IGameHubEvent.BoardUpdated"/>.</para>
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        Task<bool> NextPhase(Guid userId);
     }
 }

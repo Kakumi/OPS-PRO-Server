@@ -15,6 +15,7 @@ namespace OPSProServer.Contracts.Models
         public PlayerGameInformation OpponentGameInformation { get; private set; }
 
         public event EventHandler<PhaseChangedArgs>? PhaseChanged;
+        public event EventHandler<PlayerChangedArgs>? PlayerChanged;
 
         [JsonConstructor]
         public Game(Guid id, GameState state, int turn, Guid playerTurn, Guid firstToPlay, PlayerGameInformation creatorGameInformation, PlayerGameInformation opponentGameInformation)
@@ -63,6 +64,17 @@ namespace OPSProServer.Contracts.Models
             {
                 await UpdatePhase();
             }
+        }
+
+        public async Task NextPlayer()
+        {
+            Guid oldPlayerId = PlayerTurn;
+            Guid newPlayerId = GetOpponentPlayerInformation(PlayerTurn).UserId;
+            PlayerTurn = newPlayerId;
+
+            PlayerChanged?.Invoke(this, new PlayerChangedArgs(oldPlayerId, newPlayerId, this));
+
+            await UpdatePhase();
         }
 
         public PlayerGameInformation GetCurrentPlayerGameInformation()

@@ -122,6 +122,8 @@ namespace OPSProServer.Hubs
                             await game.UpdatePhase();
                         }
 
+                        game.PhaseChanged -= Game_PhaseChanged;
+
                         return true;
                     }
                 }
@@ -135,6 +137,10 @@ namespace OPSProServer.Hubs
             }
         }
 
+        //We need to subscribe -> execute -> unsubscribe because:
+        //When the first called is made (launch game) the event is subscribed on the right context (not disposed)
+        //But for a second called for "NextPhase", the event will use the context it was registered on (disposed at this time)
+        //So, we need to remove the subscriber after all calls and then subcribe it again before each calls.
         private async void Game_PhaseChanged(object? sender, PhaseChangedArgs e)
         {
             try
@@ -170,9 +176,10 @@ namespace OPSProServer.Hubs
 
                         //Comme la gestion des cartes ne sera pas asynchrone il faudra renvoyer un type d'action à faire depuis le serveur
                         //Du genre, demander à l'adversaire de supprimer une carte
-                        if (e.NewPhaseType == PhaseType.Draw)
-                        {
 
+                        if (e.NewPhaseType == PhaseType.Opponent && e.OldPhaseType == PhaseType.End)
+                        {
+                            await e.Game.NextPlayer();
                         }
 
                         await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), e.Game);
@@ -200,7 +207,9 @@ namespace OPSProServer.Hubs
                     {
                         if (room.Game.PlayerTurn == userId)
                         {
+                            room.Game.PhaseChanged += Game_PhaseChanged;
                             await room.Game.UpdatePhase();
+                            room.Game.PhaseChanged -= Game_PhaseChanged;
                         }
                     }
                 }

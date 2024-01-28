@@ -11,7 +11,7 @@
 
         public IPhase NextPhase()
         {
-            return new RefreshPhase(); //new OpponentPhase();
+            return new OpponentPhase();
         }
 
         public void OnPhaseEnded(Game game)
@@ -28,16 +28,7 @@
 
         public void OnPhaseStarted(Game game)
         {
-            //PlayerArea opponentArea;
-            //if (playerArea.Gameboard.PlayerArea == playerArea)
-            //{
-            //    opponentArea = playerArea.Gameboard.OpponentArea;
-            //} else
-            //{
-            //    opponentArea = playerArea.Gameboard.PlayerArea;
-            //}
 
-            //opponentArea.UpdatePhase(new DrawPhase());
         }
 
         public bool IsAutoNextPhase()
