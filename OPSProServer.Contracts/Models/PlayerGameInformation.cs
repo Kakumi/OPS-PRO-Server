@@ -276,5 +276,65 @@ namespace OPSProServer.Contracts.Models
 
             throw new NotImplementedException();
         }
+
+        public bool Summon(Guid guid)
+        {
+            var handCard = Hand.FirstOrDefault(x => x.Id == guid);
+            if (handCard != null)
+            {
+                if (DonAvailable < handCard.GetTotalCost())
+                {
+                    throw new ErrorUserActionException(UserId, "GAME_NOT_ENOUGH_DON_CARDS", DonAvailable.ToString(), handCard.GetTotalCost().ToString());
+                }
+
+                if (SetFirstEmptyCharacters(handCard))
+                {
+                    UseDonCard(handCard.GetTotalCost());
+                    Hand.RemoveAll(x => x.Id == guid);
+                    return true;
+                }
+                else
+                {
+                    throw new ErrorUserActionException(UserId, "GAME_BOARD_CHARACTERS_FULL");
+                }
+            }
+
+            return false;
+        }
+
+        public bool SetFirstEmptyCharacters(PlayingCard playingCard)
+        {
+            if (Character1 == null)
+            {
+                Character1 = playingCard;
+                return true;
+            }
+
+            if (Character2 == null)
+            {
+                Character2 = playingCard;
+                return true;
+            }
+
+            if (Character3 == null)
+            {
+                Character3 = playingCard;
+                return true;
+            }
+
+            if (Character4 == null)
+            {
+                Character4 = playingCard;
+                return true;
+            }
+
+            if (Character5 == null)
+            {
+                Character5 = playingCard;
+                return true;
+            }
+
+            return false;
+        }
     }
 }

@@ -3,6 +3,8 @@ using OPSProServer.Contracts.Events;
 using OPSProServer.Managers;
 using OPSProServer.Contracts.Models;
 using OPSProServer.Contracts.Hubs;
+using OPSProServer.Contracts.Exceptions;
+using OPSProServer.Attributes;
 
 namespace OPSProServer.Hubs
 {
@@ -195,32 +197,32 @@ namespace OPSProServer.Hubs
             }
         }
 
+        [PlayerTurn]
         public async Task<bool> NextPhase(Guid userId)
         {
-            try
-            {
-                var user = _userManager.GetUser(userId);
-                if (user != null)
-                {
-                    var room = _roomManager.GetRoom(user);
-                    if (room != null && room.Opponent != null && room.Game != null)
-                    {
-                        if (room.Game.PlayerTurn == userId)
-                        {
-                            room.Game.PhaseChanged += Game_PhaseChanged;
-                            await room.Game.UpdatePhase();
-                            room.Game.PhaseChanged -= Game_PhaseChanged;
-                        }
-                    }
-                }
+            var room = _roomManager.GetRoom(userId);
+            room!.Game!.PhaseChanged += Game_PhaseChanged;
+            await room.Game.UpdatePhase();
+            room.Game.PhaseChanged -= Game_PhaseChanged;
 
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+            return true;
+        }
+
+        [PlayerTurn]
+        public Task<bool> Attack(Guid userId, Guid attacker, Guid target)
+        {
+            throw new NotImplementedException();
+        }
+
+        [PlayerTurn]
+        public async Task<bool> Summon(Guid userId, Guid cardId)
+        {
+            var room = _roomManager.GetRoom(userId);
+            var gameInfo = room!.Game!.GetCurrentPlayerGameInformation();
+            gameInfo.Summon(cardId);
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
+
+            return true;
         }
     }
 }

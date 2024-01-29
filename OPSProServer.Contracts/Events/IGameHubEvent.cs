@@ -32,5 +32,12 @@ namespace OPSProServer.Contracts.Events
         /// </summary>
         /// <returns></returns>
         Game BoardUpdated();
+
+        /// <summary>
+        /// When the server can't process an action from the user
+        /// it will throw this error with a error code message.
+        /// </summary>
+        /// <returns></returns>
+        UserAlertMessage UserAlertMessage();
     }
 }

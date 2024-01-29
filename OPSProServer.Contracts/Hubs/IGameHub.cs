@@ -42,5 +42,9 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userId"></param>
         /// <returns></returns>
         Task<bool> NextPhase(Guid userId);
+
+        Task<bool> Attack(Guid userId, Guid attacker, Guid target);
+
+        Task<bool> Summon(Guid userId, Guid cardId);
     }
 }
