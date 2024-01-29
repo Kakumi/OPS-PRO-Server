@@ -20,6 +20,7 @@ namespace OPSProServer.Tests
     {
         private IUserManager _userManager;
         private IRoomManager _roomManager;
+        private IResolverManager _resolverManager;
         private GameHub _roomHub;
         private User _user1;
         private User _user2;
@@ -42,7 +43,8 @@ namespace OPSProServer.Tests
 
             _userManager = new UserManager();
             _roomManager = new RoomManager();
-            _roomHub = new GameHub(mock.Object, _roomManager, _userManager);
+            _resolverManager = new ResolverManager();
+            _roomHub = new GameHub(mock.Object, _roomManager, _userManager, _resolverManager);
             AssignToHubRequiredProperties(_roomHub);
             _roomHub.Context = mockHubCallerContext.Object;
 
@@ -54,11 +56,11 @@ namespace OPSProServer.Tests
             _userManager.AddUser(_user2);
             _userManager.AddUser(_user3);
 
-            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
             var cards = new List<CardInfo>();
             for(int i = 0;  i < 50; i++)
             {
-                var card = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+                var card = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
                 cards.Add(card);
             }
 

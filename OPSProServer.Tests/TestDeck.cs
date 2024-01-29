@@ -24,17 +24,17 @@ namespace OPSProServer.Tests
         [TestInitialize]
         public void Initialize()
         {
-            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED", "GREEN" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED", "GREEN" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
             _redCards = new List<CardInfo>();
             _blueCards = new List<CardInfo>();
-            _sameCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+            _sameCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
 
             for (int i = 0; i < 50; i++)
             {
-                var redCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+                var redCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
                 _redCards.Add(redCard);
 
-                var blueCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "BLUE" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test");
+                var blueCard = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "BLUE" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
                 _blueCards.Add(blueCard);
             }
 

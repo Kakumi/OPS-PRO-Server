@@ -15,6 +15,7 @@ namespace OPSProServer.Tests
     {
         private IUserManager _userManager;
         private IRoomManager _roomManager;
+        private IResolverManager _resolverManager;
         private IUserHub _userHub;
 
         [TestInitialize]
@@ -32,7 +33,8 @@ namespace OPSProServer.Tests
 
             _userManager = new UserManager();
             _roomManager = new RoomManager();
-            _userHub = new GameHub(mock.Object, _roomManager, _userManager)
+            _resolverManager = new ResolverManager();
+            _userHub = new GameHub(mock.Object, _roomManager, _userManager, _resolverManager)
             {
                 Context = mockHubCallerContext.Object,
                 Clients = mockClients.Object,
