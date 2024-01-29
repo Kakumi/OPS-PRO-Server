@@ -205,7 +205,8 @@ namespace OPSProServer.Hubs
         [InGame]
         public async Task<bool> NextPhase(Guid userId)
         {
-            var room = _roomManager.GetRoom(userId);
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
             room!.Game!.PhaseChanged += Game_PhaseChanged;
             await room.Game.UpdatePhase();
             room.Game.PhaseChanged -= Game_PhaseChanged;
@@ -330,9 +331,36 @@ namespace OPSProServer.Hubs
         }
 
         [InGame]
-        public Task<bool> GiveDonCard(Guid userId, Guid characterCardId)
+        public async Task<bool> GiveDonCard(Guid userId, Guid characterCardId)
         {
-            throw new NotImplementedException();
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
+            var gameInfo = room!.Game!.GetMyPlayerInformation(userId);
+            var card = gameInfo.GetCharacter(characterCardId);
+
+            if (card == null)
+            {
+                throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
+            }
+
+            if (gameInfo.DonAvailable == 0)
+            {
+                throw new ErrorUserActionException(userId, "GAME_NOT_ENOUGH_DON", "1");
+            }
+
+            card.PowerModifier.Add(new KeyValuePair<ModifierDuration, int>(ModifierDuration.Turn, 1000));
+            gameInfo.UseDonCard(1);
+
+            var cardScript = _cardService.GetCardScript(card);
+            if (cardScript != null)
+            {
+                cardScript.OnGiveDon(user, room.Game);
+            }
+
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
+
+            return true;
         }
 
         [InGame]
