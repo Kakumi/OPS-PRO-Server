@@ -163,6 +163,76 @@ namespace OPSProServer.Contracts.Models
             return list;
         }
 
+        public PlayingCard? GetCharacter(Guid id)
+        {
+            if (Character1 != null && Character1.Id == id)
+            {
+                return Character1;
+            }
+
+            if (Character2 != null && Character2.Id == id)
+            {
+                return Character2;
+            }
+
+            if (Character3 != null && Character3.Id == id)
+            {
+                return Character3;
+            }
+
+            if (Character4 != null && Character4.Id == id)
+            {
+                return Character4;
+            }
+
+            if (Character5 != null && Character5.Id == id)
+            {
+                return Character5;
+            }
+
+            return null;
+        }
+
+        public bool KillCharacter(Guid id)
+        {
+            if (Character1 != null && Character1.Id == id)
+            {
+                Trash.Add(Character1);
+                Character1 = null;
+                return true;
+            }
+
+            if (Character2 != null && Character2.Id == id)
+            {
+                Trash.Add(Character2);
+                Character2 = null;
+                return true;
+            }
+
+            if (Character3 != null && Character3.Id == id)
+            {
+                Trash.Add(Character3);
+                Character3 = null;
+                return true;
+            }
+
+            if (Character4 != null && Character4.Id == id)
+            {
+                Trash.Add(Character4);
+                Character4 = null;
+                return true;
+            }
+
+            if (Character5 != null && Character5.Id == id)
+            {
+                Trash.Add(Character5);
+                Character5 = null;
+                return true;
+            }
+
+            return false;
+        }
+
         public void AddDeckCard(PlayingCard playingCard)
         {
             Deck.Add(playingCard);

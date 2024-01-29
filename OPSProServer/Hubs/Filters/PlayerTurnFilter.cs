@@ -25,7 +25,7 @@ namespace OPSProServer.Hubs.Filters
         public async ValueTask<object?> InvokeMethodAsync(
         HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            var attrs = invocationContext.HubMethod.GetCustomAttributes<PlayerTurnAttribute>();
+            var attrs = invocationContext.HubMethod.GetCustomAttributes<InGameAttribute>();
             if (attrs != null && attrs.Count() > 0)
             {
                 var user = _userManager.GetUser(invocationContext.Context.ConnectionId);

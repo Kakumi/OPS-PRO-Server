@@ -1,4 +1,5 @@
-﻿using OPSProServer.Contracts.Models;
+﻿using OPSProServer.Contracts.Hubs;
+using OPSProServer.Contracts.Models;
 using System;
 
 namespace OPSProServer.Contracts.Events
@@ -39,5 +40,25 @@ namespace OPSProServer.Contracts.Events
         /// </summary>
         /// <returns></returns>
         UserAlertMessage UserAlertMessage();
+
+        /// <summary>
+        /// When an action is made from any user it will send message code with args.
+        /// </summary>
+        /// <returns></returns>
+        UserGameMessage UserGameMessage();
+
+        /// <summary>
+        /// <para>When the opponent need to react to an action.</para>
+        /// </summary>
+        /// <returns>True if you need to wait, false to stop waiting.</returns>
+        bool WaitOpponent();
+
+        /// <summary>
+        /// <para>When an event has trigger and a user has to respond to this event.</para>
+        /// <para>Can be use for blocker, counter, opponent turn, ...</para>
+        /// <para>Need to call <see cref="IGameHub.ResolveAction"/> to resolve.</para>
+        /// </summary>
+        /// <returns></returns>
+        UserResolver AskUserAction();
     }
 }

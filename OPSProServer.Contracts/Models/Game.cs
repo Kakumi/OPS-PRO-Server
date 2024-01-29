@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OPSProServer.Contracts.Exceptions;
+using System;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -110,6 +111,46 @@ namespace OPSProServer.Contracts.Models
         public void IncrementTurn()
         {
             Turn++;
+        }
+
+        public bool CanAttack(Guid userId, Guid attacker)
+        {
+            var myGameInfo = GetMyPlayerInformation(userId);
+            var attackerCard = myGameInfo.GetCharacter(attacker);
+
+            //TODO Check si le joueur peut attaquer (nb tour > 1)
+            //TODO Check si la carte peut attaqué le tour de son invocation (rush / nb tour carte > 1)
+            return attackerCard != null && !attackerCard.Rested;
+        }
+
+        public AttackResult Attack(Guid userId, Guid attacker, Guid target)
+        {
+            var myGameInfo = GetMyPlayerInformation(userId);
+            var opponentGameInfo = GetOpponentPlayerInformation(userId);
+            var attackerCard = myGameInfo.GetCharacter(attacker);
+            var defenderCard = opponentGameInfo.GetCharacter(target);
+            if (attackerCard != null && defenderCard != null)
+            {
+                attackerCard.Rested = true;
+
+                if (attackerCard.GetTotalPower() >= defenderCard.GetTotalPower())
+                {
+                    if (defenderCard.Rested)
+                    {
+                        opponentGameInfo.KillCharacter(target);
+                    } else
+                    {
+                        defenderCard.Rested = true;
+                    }
+
+                    return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, true);
+                    //TODO Manage life points and potential trigger
+                }
+
+                return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, false);
+            }
+
+            throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
         }
     }
 }

@@ -15,6 +15,7 @@ builder.Services.AddSignalR(hubOptions =>
 builder.Services.Configure<OpsPro>(builder.Configuration.GetSection("OpsPro"));
 builder.Services.AddSingleton<IRoomManager, RoomManager>();
 builder.Services.AddSingleton<IUserManager, UserManager>();
+builder.Services.AddSingleton<IResolverManager, ResolverManager>();
 builder.Services.AddScoped<PlayerTurnFilter>();
 builder.Services.AddScoped<ErrorHandlerFilter>();
 

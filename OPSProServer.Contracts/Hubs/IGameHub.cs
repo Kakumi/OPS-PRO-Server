@@ -2,6 +2,7 @@
 using OPSProServer.Contracts.Events;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace OPSProServer.Contracts.Hubs
 {
@@ -45,6 +46,12 @@ namespace OPSProServer.Contracts.Hubs
 
         Task<bool> Attack(Guid userId, Guid attacker, Guid target);
 
+        Task<bool> GiveDonCard(Guid userId, Guid characterCardId);
+
+        Task<bool> ActivateCardEffect(Guid userId, Guid characterCardId);
+
         Task<bool> Summon(Guid userId, Guid cardId);
+
+        Task<bool> ResolveAction(Guid userId, Guid actionId, List<Guid> cards);
     }
 }
