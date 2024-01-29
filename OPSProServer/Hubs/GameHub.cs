@@ -5,19 +5,22 @@ using OPSProServer.Contracts.Models;
 using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Exceptions;
 using OPSProServer.Attributes;
+using OPSProServer.Services;
 
 namespace OPSProServer.Hubs
 {
     public partial class GameHub : Hub, IGameHub
     {
         protected readonly ILogger<GameHub> _logger;
+        protected readonly ICardService _cardService;
         protected readonly IRoomManager _roomManager;
         protected readonly IUserManager _userManager;
         protected readonly IResolverManager _resolverManager;
 
-        public GameHub(ILogger<GameHub> logger, IRoomManager roomManager, IUserManager userManager, IResolverManager resolverManager)
+        public GameHub(ILogger<GameHub> logger, ICardService cardService, IRoomManager roomManager, IUserManager userManager, IResolverManager resolverManager)
         {
             _logger = logger;
+            _cardService = cardService;
             _roomManager = roomManager;
             _userManager = userManager;
             _resolverManager = resolverManager;

@@ -6,6 +6,7 @@
         Throw,
         Discard,
         Attack,
-        Summon
+        Summon,
+        GiveDon
     }
 }

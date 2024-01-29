@@ -56,7 +56,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userId"></param>
         /// <param name="deckInfo"></param>
         /// <returns></returns>
-        Task<bool> SetReady(Guid userId, DeckInfo? deckInfo);
+        Task<bool> SetReady(Guid userId, string name, List<string> cardsId);//DeckInfo? deckInfo);
 
         /// <summary>
         /// <para>Exclude a user from the room.</para>

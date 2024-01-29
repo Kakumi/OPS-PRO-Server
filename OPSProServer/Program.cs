@@ -3,6 +3,7 @@ using OPSProServer.Hubs;
 using OPSProServer.Hubs.Filters;
 using OPSProServer.Managers;
 using OPSProServer.Models;
+using OPSProServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,7 @@ builder.Services.AddSingleton<IUserManager, UserManager>();
 builder.Services.AddSingleton<IResolverManager, ResolverManager>();
 builder.Services.AddScoped<PlayerTurnFilter>();
 builder.Services.AddScoped<ErrorHandlerFilter>();
+builder.Services.AddSingleton<ICardService, CardService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

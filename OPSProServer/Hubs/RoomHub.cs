@@ -133,7 +133,7 @@ namespace OPSProServer.Hubs
             return true;
         }
 
-        public async Task<bool> SetReady(Guid userId, DeckInfo? deckInfo)
+        public async Task<bool> SetReady(Guid userId, string name, List<string> cardsId)//DeckInfo? deckInfo)
         {
             try
             {
@@ -143,6 +143,16 @@ namespace OPSProServer.Hubs
                     var room = _roomManager.GetRoom(user);
                     if (room != null)
                     {
+                        DeckInfo deckInfo = new DeckInfo(name);
+                        foreach (var cardId in cardsId)
+                        {
+                            var cardInfo = _cardService.GetCardInfo(cardId);
+                            if (cardInfo != null)
+                            {
+                                deckInfo.Cards.Add(cardInfo);
+                            }
+                        }
+
                         if (deckInfo == null || !deckInfo.IsValid())
                         {
                             return false;

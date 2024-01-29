@@ -121,6 +121,11 @@ namespace OPSProServer.Contracts.Models
 
             DrawCard(5);
 
+#if DEBUG
+            Character1 = Hand.First();
+            //Hand.RemoveAll(x => x.Id == Character1.Id);
+#endif
+
             RemoveDeckCards(leaderCard!.Cost).ForEach(x =>
             {
                 AddLifeCard(x);

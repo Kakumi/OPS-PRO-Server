@@ -2,21 +2,22 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OPSProServer.Contracts.Models;
 using OPSProServer.Models;
+using OPSProServer.Services;
 using System.Text.Json;
 
 namespace OPSProServer.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    internal class CardsController : ControllerBase
+    public class CardsController : ControllerBase
     {
         private readonly ILogger<CardsController> _logger;
-        private readonly IOptions<OpsPro> _config;
+        private readonly ICardService _cardService;
 
-        public CardsController(ILogger<CardsController> logger, IOptions<OpsPro> config)
+        public CardsController(ILogger<CardsController> logger, ICardService cardService)
         {
             _logger = logger;
-            _config = config;
+            _cardService = cardService;
         }
 
         [HttpGet]
@@ -25,15 +26,7 @@ namespace OPSProServer.Controllers
         {
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
-
-                string allText = System.IO.File.ReadAllText(_config.Value.CardsPath!);
-                var cards = JsonSerializer.Deserialize<List<CardInfo>>(allText, options);
-
-                return new JsonResult(cards);
+                return new JsonResult(_cardService.GetCardsInfo());
             }
             catch (Exception ex)
             {

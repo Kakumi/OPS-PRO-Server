@@ -20,9 +20,14 @@ namespace OPSProServer.Contracts.Models
         public List<string> Types { get; private set; }
         public List<string> Effects { get; private set; }
         public string? Set { get; private set; }
+        public bool IsBlocker { get; private set; }
+        public bool IsRush { get; private set; }
+        public bool IsDoubleAttack { get; private set; }
+        public bool IsBanish { get; private set; }
+        public bool IsTrigger { get; private set; }
 
         [JsonConstructor]
-        public CardInfo(string id, List<string>? images, string number, string rarity, string cardType, string name, int cost, string? attributeImage, string attribute, int power, int counter, List<string> colors, List<string> types, List<string> effects, string? set)
+        public CardInfo(string id, List<string>? images, string number, string rarity, string cardType, string name, int cost, string? attributeImage, string attribute, int power, int counter, List<string> colors, List<string> types, List<string> effects, string? set, bool isBlocker, bool isRush, bool isDoubleAttack, bool isBanish, bool isTrigger)
         {
             Id = id;
             Images = images;
@@ -39,6 +44,11 @@ namespace OPSProServer.Contracts.Models
             Types = types;
             Effects = effects;
             Set = set;
+            IsBlocker = isBlocker;
+            IsRush = isRush;
+            IsDoubleAttack = isDoubleAttack;
+            IsBanish = isBanish;
+            IsTrigger = isTrigger;
         }
 
         public CardCategory CardCategory
