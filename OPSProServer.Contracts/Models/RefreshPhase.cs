@@ -29,6 +29,7 @@ namespace OPSProServer.Contracts.Models
                 game.IncrementTurn();
             }
 
+            playerInfo.IncrementCardsTurn();
             playerInfo.UnrestCostDeck();
             playerInfo.GetCharacters().ForEach(x =>
             {

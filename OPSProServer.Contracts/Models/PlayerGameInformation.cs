@@ -170,6 +170,11 @@ namespace OPSProServer.Contracts.Models
 
         public PlayingCard? GetCharacter(Guid id)
         {
+            if (Leader != null && Leader.Id == id)
+            {
+                return Leader;
+            }
+
             if (Character1 != null && Character1.Id == id)
             {
                 return Character1;
@@ -240,6 +245,7 @@ namespace OPSProServer.Contracts.Models
 
         public void AddDeckCard(PlayingCard playingCard)
         {
+            playingCard.ResetTurn();
             Deck.Add(playingCard);
         }
 
@@ -277,11 +283,13 @@ namespace OPSProServer.Contracts.Models
 
         public void AddHandCard(PlayingCard playingCard)
         {
+            playingCard.ResetTurn();
             Hand.Add(playingCard);
         }
 
         public void AddLifeCard(PlayingCard playingCard)
         {
+            playingCard.ResetTurn();
             Lifes.Push(playingCard);
         }
 
@@ -334,6 +342,7 @@ namespace OPSProServer.Contracts.Models
 
         public void TrashCard(PlayingCard playingCard)
         {
+            playingCard.ResetTurn();
             Trash.Add(playingCard);
         }
 
@@ -352,7 +361,7 @@ namespace OPSProServer.Contracts.Models
             throw new NotImplementedException();
         }
 
-        public bool Summon(Guid guid)
+        public PlayingCard Summon(Guid guid)
         {
             var handCard = Hand.FirstOrDefault(x => x.Id == guid);
             if (handCard != null)
@@ -366,7 +375,7 @@ namespace OPSProServer.Contracts.Models
                 {
                     UseDonCard(handCard.GetTotalCost());
                     Hand.RemoveAll(x => x.Id == guid);
-                    return true;
+                    return handCard;
                 }
                 else
                 {
@@ -374,7 +383,7 @@ namespace OPSProServer.Contracts.Models
                 }
             }
 
-            return false;
+            throw new ErrorUserActionException(UserId, "GAME_CARD_NOT_FOUND");
         }
 
         public bool SetFirstEmptyCharacters(PlayingCard playingCard)
@@ -410,6 +419,20 @@ namespace OPSProServer.Contracts.Models
             }
 
             return false;
+        }
+
+        public void IncrementCardsTurn()
+        {
+            Leader.IncrementTurn();
+            if (Stage != null)
+            {
+                Stage.IncrementTurn();
+            }
+
+            foreach(var character in GetCharacters())
+            {
+                character.IncrementTurn();
+            }
         }
     }
 }

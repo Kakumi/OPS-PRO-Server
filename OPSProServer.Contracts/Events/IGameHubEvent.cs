@@ -1,6 +1,7 @@
 ﻿using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Models;
 using System;
+using System.Collections.Generic;
 
 namespace OPSProServer.Contracts.Events
 {
@@ -48,6 +49,12 @@ namespace OPSProServer.Contracts.Events
         UserGameMessage UserGameMessage();
 
         /// <summary>
+        /// When the user ask for attack, this list will return ids for each attackable character from the opponent.
+        /// </summary>
+        /// <returns></returns>
+        AttackableResult AttackableCards();
+
+        /// <summary>
         /// <para>When the opponent need to react to an action.</para>
         /// </summary>
         /// <returns>True if you need to wait, false to stop waiting.</returns>
@@ -60,5 +67,11 @@ namespace OPSProServer.Contracts.Events
         /// </summary>
         /// <returns></returns>
         UserResolver AskUserAction();
+
+        /// <summary>
+        /// <para>When the game is finished and there is a winner</para>
+        /// </summary>
+        /// <returns></returns>
+        Guid GameFinished();
     }
 }

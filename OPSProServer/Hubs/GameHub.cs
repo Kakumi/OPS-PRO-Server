@@ -214,37 +214,65 @@ namespace OPSProServer.Hubs
         }
 
         [InGame]
+        public async Task<bool> GetAttackableCards(Guid userId, Guid attacker)
+        {
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
+            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userId);
+
+            if (room.Game!.CanAttack(userId, attacker))
+            {
+                var cards = new List<Guid>();
+                cards.Add(opponentGameInfo.Leader.Id);
+                cards.AddRange(opponentGameInfo.GetCharacters().Where(x => x.Rested).Select(x => x.Id));
+                if (cards.Count == 0)
+                {
+                    throw new ErrorUserActionException(userId, "GAME_NO_CARDS_TO_ATTACK");
+                }
+
+                var result = new AttackableResult(attacker, cards);
+                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.AttackableCards), result);
+            }
+
+            return true;
+        }
+
+        [InGame]
         public async Task<bool> Attack(Guid userId, Guid attacker, Guid target)
         {
-            Room room = _roomManager.GetRoom(userId)!;
-            var user = _userManager.GetUser(userId);
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
             var myGameInfo = room.Game!.GetMyPlayerInformation(userId);
             var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userId);
-            var attackerCard = myGameInfo.GetCharacter(attacker);
-            var defenderCard = opponentGameInfo.GetCharacter(target);
-            if (attackerCard != null && defenderCard != null)
+
+            if (room.Game!.CanAttack(userId, attacker))
             {
-                //Check blocker
-                if (false)
+                var attackerCard = myGameInfo.GetCharacter(attacker);
+                var defenderCard = opponentGameInfo.GetCharacter(target);
+                if (attackerCard != null && defenderCard != null)
                 {
-                    var opponent = room.GetOpponent(userId);
-                    var resolver = new ActionResolver(CardAction.Attack, attacker, target, userId);
-                    _resolverManager.AddResolver(resolver);
-                    var userResolver = new UserResolver(resolver.Id, ActionResolverType.Blocker, "GAME_ASK_BLOCKER", new List<Guid>());
-                    _resolverManager.AddUserResolver(userResolver);
-                    await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.AskUserAction), userResolver);
-                    await Clients.Client(user!.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), true);
-                    return true;
-                }
+                    //Check blocker
+                    if (false)
+                    {
+                        var opponent = room.GetOpponent(userId);
+                        var resolver = new ActionResolver(CardAction.Attack, attacker, target, userId);
+                        _resolverManager.AddResolver(resolver);
+                        var userResolver = new UserResolver(resolver.Id, ActionResolverType.Blocker, "GAME_ASK_BLOCKER", new List<Guid>());
+                        _resolverManager.AddUserResolver(userResolver);
+                        await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.AskUserAction), userResolver);
+                        await Clients.Client(user!.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), true);
+                        return true;
+                    }
 
-                //Check counter
-                var sent = await CheckCounters(userId, attacker, target, null);
-                if (sent)
-                {
-                    return true;
-                }
+                    //Check counter
+                    var sent = await CheckCounters(userId, attacker, target, null);
+                    if (sent)
+                    {
+                        return true;
+                    }
 
-                return await ResolveAttack(userId, attacker, target);
+                    return await ResolveAttack(userId, attacker, target);
+                }
             }
 
             throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
@@ -254,7 +282,8 @@ namespace OPSProServer.Hubs
         {
             if (false)
             {
-                Room room = _roomManager.GetRoom(userId)!;
+                User user = _userManager.GetUser(userId)!;
+                Room room = _roomManager.GetRoom(user)!;
                 var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userId);
                 var opponent = room.GetOpponent(userId);
                 ActionResolver? resolver = _resolverManager.GetResolver(resolverId);
@@ -274,17 +303,27 @@ namespace OPSProServer.Hubs
 
         private async Task<bool> ResolveAttack(Guid userId, Guid attacker, Guid defender)
         {
-            Room room = _roomManager.GetRoom(userId)!;
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
             var result = room.Game!.Attack(userId, attacker, defender);
 
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
             if (result.Success)
             {
-                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_ATTACK_SUCCESS", result.AttackerGameInfo.Username, result.DefenderGameInfo.Username, result.AttackerCard.CardInfo.Name, result.DefenderCard.CardInfo.Name));
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_ATTACK_SUCCESS", result.AttackerGameInfo.Username, result.DefenderGameInfo.Username, result.AttackerCard.CardInfo.Name, result.DefenderCard.CardInfo.Name, result.AttackerCard.GetTotalPower().ToString(), result.DefenderCard.GetTotalPower().ToString()));
+                if (result.Winner)
+                {
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameFinished), userId);
+                } else if (result.LifeCard != null)
+                {
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_LOOSE_LIFE", result.DefenderGameInfo.Username, result.DefenderGameInfo.Lifes.Count().ToString()));
+                    //TODO Ask for trigger life card or not
+                    //If not, add to hand
+                }
             }
             else
             {
-                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_ATTACK_FAILED", result.AttackerGameInfo.Username, result.DefenderGameInfo.Username, result.AttackerCard.CardInfo.Name, result.DefenderCard.CardInfo.Name));
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_ATTACK_FAILED", result.AttackerGameInfo.Username, result.DefenderGameInfo.Username, result.AttackerCard.CardInfo.Name, result.DefenderCard.CardInfo.Name, result.AttackerCard.GetTotalPower().ToString(), result.DefenderCard.GetTotalPower().ToString()));
             }
 
             return true;
@@ -299,10 +338,12 @@ namespace OPSProServer.Hubs
         [InGame]
         public async Task<bool> Summon(Guid userId, Guid cardId)
         {
-            var room = _roomManager.GetRoom(userId);
+            User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
             var gameInfo = room!.Game!.GetCurrentPlayerGameInformation();
-            gameInfo.Summon(cardId);
+            var summonedCard = gameInfo.Summon(cardId);
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_PLAYER_SUMMONED", user.Username, summonedCard.CardInfo.Name, summonedCard.GetTotalCost().ToString()));
 
             return true;
         }
@@ -316,8 +357,8 @@ namespace OPSProServer.Hubs
         [InGame]
         public async Task<bool> ResolveAction(Guid userId, Guid userResolverId, List<Guid> cards)
         {
-            Room room = _roomManager.GetRoom(userId)!;
             User user = _userManager.GetUser(userId)!;
+            Room room = _roomManager.GetRoom(user)!;
             bool errorWithResolver = true;
             var userResolver = _resolverManager.GetUserResolver(userResolverId);
             if (userResolver != null)

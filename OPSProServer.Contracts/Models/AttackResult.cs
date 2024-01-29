@@ -12,15 +12,19 @@ namespace OPSProServer.Contracts.Models
         public PlayerGameInformation DefenderGameInfo { get; }
         public PlayingCard AttackerCard { get; }
         public PlayingCard DefenderCard { get; }
+        public PlayingCard? LifeCard { get; }
         public bool Success { get; }
+        public bool Winner { get; }
 
-        public AttackResult(PlayerGameInformation attackerGameInfo, PlayerGameInformation defenderGameInfo, PlayingCard attackerCard, PlayingCard defenderCard, bool success)
+        public AttackResult(PlayerGameInformation attackerGameInfo, PlayerGameInformation defenderGameInfo, PlayingCard attackerCard, PlayingCard defenderCard, PlayingCard? lifeCard, bool success, bool winner)
         {
             AttackerGameInfo = attackerGameInfo;
             DefenderGameInfo = defenderGameInfo;
             AttackerCard = attackerCard;
             DefenderCard = defenderCard;
+            LifeCard = lifeCard;
             Success = success;
+            Winner = winner;
         }
     }
 }

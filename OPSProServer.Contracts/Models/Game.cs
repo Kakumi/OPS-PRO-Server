@@ -118,9 +118,28 @@ namespace OPSProServer.Contracts.Models
             var myGameInfo = GetMyPlayerInformation(userId);
             var attackerCard = myGameInfo.GetCharacter(attacker);
 
-            //TODO Check si le joueur peut attaquer (nb tour > 1)
-            //TODO Check si la carte peut attaqué le tour de son invocation (rush / nb tour carte > 1)
-            return attackerCard != null && !attackerCard.Rested;
+            if (Turn <= 1)
+            {
+                throw new ErrorUserActionException(userId, "GAME_PLAYER_CANT_ATTACK_FIRST_TURN");
+            }
+
+            if (attackerCard == null)
+            {
+                throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
+            }
+
+            //TODO Check if card is rush
+            if (attackerCard.Turn <= 1 && !attackerCard.CardInfo.IsRush)
+            {
+                throw new ErrorUserActionException(userId, "GAME_PLAYER_CHARACTER_CANT_ATTACK_FIRST_TURN");
+            }
+
+            if (attackerCard.Rested)
+            {
+                throw new ErrorUserActionException(userId, "GAME_PLAYER_CHARACTER_CANT_ATTACK_RESTED");
+            }
+
+            return true;
         }
 
         public AttackResult Attack(Guid userId, Guid attacker, Guid target)
@@ -133,21 +152,30 @@ namespace OPSProServer.Contracts.Models
             {
                 attackerCard.Rested = true;
 
+                PlayingCard? lifeCard = null;
+                bool winner = false;
                 if (attackerCard.GetTotalPower() >= defenderCard.GetTotalPower())
                 {
                     if (defenderCard.Rested)
                     {
                         opponentGameInfo.KillCharacter(target);
-                    } else
-                    {
-                        defenderCard.Rested = true;
                     }
 
-                    return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, true);
-                    //TODO Manage life points and potential trigger
+                    if (defenderCard.CardInfo.CardCategory == CardCategory.LEADER)
+                    {
+                        if (opponentGameInfo.Lifes.Count > 0)
+                        {
+                            lifeCard = opponentGameInfo.RemoveLifeCard();
+                        } else
+                        {
+                            winner = true;
+                        }
+                    }
+
+                    return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, lifeCard, true, winner);
                 }
 
-                return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, false);
+                return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, lifeCard, false, winner);
             }
 
             throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");

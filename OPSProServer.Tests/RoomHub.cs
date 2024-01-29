@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using Moq;
 using OPSProServer.Contracts.Events;
@@ -9,6 +10,8 @@ using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Models;
 using OPSProServer.Hubs;
 using OPSProServer.Managers;
+using OPSProServer.Models;
+using OPSProServer.Services;
 using SignalR_UnitTestingSupportCommon.IHubContextSupport;
 using SignalR_UnitTestingSupportMSTest.Hubs;
 using System.Diagnostics;
@@ -21,6 +24,7 @@ namespace OPSProServer.Tests
         private IUserManager _userManager;
         private IRoomManager _roomManager;
         private IResolverManager _resolverManager;
+        private ICardService _cardService;
         private GameHub _roomHub;
         private User _user1;
         private User _user2;
@@ -44,7 +48,9 @@ namespace OPSProServer.Tests
             _userManager = new UserManager();
             _roomManager = new RoomManager();
             _resolverManager = new ResolverManager();
-            _roomHub = new GameHub(mock.Object, _roomManager, _userManager, _resolverManager);
+            IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
+            _cardService = new CardService(options);
+            _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager);
             AssignToHubRequiredProperties(_roomHub);
             _roomHub.Context = mockHubCallerContext.Object;
 
@@ -343,8 +349,8 @@ namespace OPSProServer.Tests
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var readyEmpty = await _roomHub.SetReady(_user1.Id, null);
-            var ready = await _roomHub.SetReady(_user1.Id, _deckInfo);
+            var readyEmpty = await _roomHub.SetReady(_user1.Id, null, null);
+            var ready = await _roomHub.SetReady(_user1.Id, _deckInfo.Name, _deckInfo.Cards.Select(x => x.Id).ToList());
 
             ClientsGroupMock.Verify(
                 x => x.SendCoreAsync(

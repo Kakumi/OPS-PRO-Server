@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using Moq;
 using OPSProServer.Contracts.Hubs;
 using OPSProServer.Hubs;
 using OPSProServer.Managers;
+using OPSProServer.Models;
+using OPSProServer.Services;
 
 namespace OPSProServer.Tests
 {
@@ -16,6 +19,7 @@ namespace OPSProServer.Tests
         private IUserManager _userManager;
         private IRoomManager _roomManager;
         private IResolverManager _resolverManager;
+        private CardService _cardService;
         private IUserHub _userHub;
 
         [TestInitialize]
@@ -34,7 +38,9 @@ namespace OPSProServer.Tests
             _userManager = new UserManager();
             _roomManager = new RoomManager();
             _resolverManager = new ResolverManager();
-            _userHub = new GameHub(mock.Object, _roomManager, _userManager, _resolverManager)
+            IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
+            _cardService = new CardService(options);
+            _userHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager)
             {
                 Context = mockHubCallerContext.Object,
                 Clients = mockClients.Object,

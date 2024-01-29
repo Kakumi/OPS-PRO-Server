@@ -16,9 +16,10 @@ namespace OPSProServer.Contracts.Models
         public bool Flipped { get; set; }
         public bool Destructable { get; set; }
         public bool VisibleForOpponent { get; set; }
+        public int Turn { get; private set; }
 
         [JsonConstructor]
-        public PlayingCard(Guid id, CardInfo cardInfo, List<KeyValuePair<ModifierDuration, int>> costModifier, List<KeyValuePair<ModifierDuration, int>> counterModifier, List<KeyValuePair<ModifierDuration, int>> powerModifier, bool rested, bool flipped, bool destructable, bool visibleForOpponent)
+        public PlayingCard(Guid id, CardInfo cardInfo, List<KeyValuePair<ModifierDuration, int>> costModifier, List<KeyValuePair<ModifierDuration, int>> counterModifier, List<KeyValuePair<ModifierDuration, int>> powerModifier, bool rested, bool flipped, bool destructable, bool visibleForOpponent, int turn)
         {
             Id = id;
             CardInfo = cardInfo;
@@ -29,6 +30,7 @@ namespace OPSProServer.Contracts.Models
             Flipped = flipped;
             Destructable = destructable;
             VisibleForOpponent = visibleForOpponent;
+            Turn = turn;
         }
 
         public PlayingCard(CardInfo cardInfo)
@@ -42,6 +44,7 @@ namespace OPSProServer.Contracts.Models
             Flipped = false;
             Destructable = false;
             VisibleForOpponent = false;
+            Turn = 1;
         }
 
         public void ToggleRested()
@@ -99,6 +102,16 @@ namespace OPSProServer.Contracts.Models
             PowerModifier = PowerModifier.Where(x => x.Key != type).ToList();
             CostModifier = CostModifier.Where(x => x.Key != type).ToList();
             CounterModifier = CounterModifier.Where(x => x.Key != type).ToList();
+        }
+
+        public void IncrementTurn()
+        {
+            Turn++;
+        }
+
+        internal void ResetTurn()
+        {
+            Turn = 0;
         }
     }
 }

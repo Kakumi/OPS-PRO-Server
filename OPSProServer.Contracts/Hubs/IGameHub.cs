@@ -44,6 +44,14 @@ namespace OPSProServer.Contracts.Hubs
         /// <returns></returns>
         Task<bool> NextPhase(Guid userId);
 
+        /// <summary>
+        /// <para>Ask the server which cards can the user attack.</para>
+        /// <para>This method will fire <see cref="IGameHubEvent.BoardUpdated"/>.</para>
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        Task<bool> GetAttackableCards(Guid userId, Guid attacker);
+
         Task<bool> Attack(Guid userId, Guid attacker, Guid target);
 
         Task<bool> GiveDonCard(Guid userId, Guid characterCardId);
