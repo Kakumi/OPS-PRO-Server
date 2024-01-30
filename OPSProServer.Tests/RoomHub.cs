@@ -25,6 +25,7 @@ namespace OPSProServer.Tests
         private IRoomManager _roomManager;
         private IResolverManager _resolverManager;
         private ICardService _cardService;
+        private IGameRuleService _gameRuleEngine;
         private GameHub _roomHub;
         private User _user1;
         private User _user2;
@@ -36,10 +37,12 @@ namespace OPSProServer.Tests
         public void Initialize()
         {
             var mock = new Mock<ILogger<GameHub>>();
+            var mockCardServiceLogger = new Mock<ILogger<CardService>>();
 
             var request = new Mock<IRequest>();
             var mockClients = new Mock<IHubCallerClients>();
             var mockGroupManager = new Mock<IGroupManager>();
+            var mockRuleEngine = new Mock<IGameRuleService>();
             var mockHubCallerContext = new Mock<HubCallerContext>();
 
             mockHubCallerContext.SetupGet(c => c.ConnectionId).Returns("unit_test");
@@ -49,8 +52,9 @@ namespace OPSProServer.Tests
             _roomManager = new RoomManager();
             _resolverManager = new ResolverManager();
             IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
-            _cardService = new CardService(options);
-            _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager);
+            _cardService = new CardService(mockCardServiceLogger.Object, options);
+            _gameRuleEngine = new GameRuleService(_cardService);
+            _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
             AssignToHubRequiredProperties(_roomHub);
             _roomHub.Context = mockHubCallerContext.Object;
 

@@ -113,72 +113,13 @@ namespace OPSProServer.Contracts.Models
             Turn++;
         }
 
+        //Mainly for client since this method is redefined inside GameRuleEngine with more details
         public bool CanAttack(Guid userId, Guid attacker)
         {
             var myGameInfo = GetMyPlayerInformation(userId);
-            var attackerCard = myGameInfo.GetCharacter(attacker);
+            var attackerCard = myGameInfo.GetAttacker(attacker);
 
-            if (Turn <= 1)
-            {
-                throw new ErrorUserActionException(userId, "GAME_PLAYER_CANT_ATTACK_FIRST_TURN");
-            }
-
-            if (attackerCard == null)
-            {
-                throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
-            }
-
-            //TODO Check if card is rush
-            if (attackerCard.Turn <= 1 && !attackerCard.CardInfo.IsRush)
-            {
-                throw new ErrorUserActionException(userId, "GAME_PLAYER_CHARACTER_CANT_ATTACK_FIRST_TURN");
-            }
-
-            if (attackerCard.Rested)
-            {
-                throw new ErrorUserActionException(userId, "GAME_PLAYER_CHARACTER_CANT_ATTACK_RESTED");
-            }
-
-            return true;
-        }
-
-        public AttackResult Attack(Guid userId, Guid attacker, Guid target)
-        {
-            var myGameInfo = GetMyPlayerInformation(userId);
-            var opponentGameInfo = GetOpponentPlayerInformation(userId);
-            var attackerCard = myGameInfo.GetCharacter(attacker);
-            var defenderCard = opponentGameInfo.GetCharacter(target);
-            if (attackerCard != null && defenderCard != null)
-            {
-                attackerCard.Rested = true;
-
-                PlayingCard? lifeCard = null;
-                bool winner = false;
-                if (attackerCard.GetTotalPower() >= defenderCard.GetTotalPower())
-                {
-                    if (defenderCard.Rested)
-                    {
-                        opponentGameInfo.KillCharacter(target);
-                    }
-
-                    if (defenderCard.CardInfo.CardCategory == CardCategory.LEADER)
-                    {
-                        if (opponentGameInfo.Lifes.Count > 0)
-                        {
-                            lifeCard = opponentGameInfo.RemoveLifeCard();
-                        } else
-                        {
-                            winner = true;
-                        }
-                    }
-
-                    return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, lifeCard, true, winner);
-                }
-
-                return new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, lifeCard, false, winner);
-            }
-
-            throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
+            return Turn > 1 && attackerCard != null && (attackerCard.Turn > 1 || attackerCard.CardInfo.IsRush) && !attackerCard.Rested;
         }
     }
 }

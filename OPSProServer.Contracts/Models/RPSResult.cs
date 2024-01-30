@@ -6,18 +6,30 @@ namespace OPSProServer.Contracts.Models
 {
     public class RPSResult
     {
-        public Dictionary<Guid, RPSChoice> Signs { get; private set; }
+        public Guid CreatorId { get; set; }
+        public RPSChoice CreatorChoice { get; set; }
+        public Guid OpponentId { get; set; }
+        public RPSChoice OpponentChoice { get; set; }
         public Guid? Winner { get; }
 
-        public RPSResult(Guid? winner) : this(winner, new Dictionary<Guid, RPSChoice>())
+        [JsonConstructor]
+        public RPSResult(Guid creatorId, RPSChoice creatorChoice, Guid opponentId, RPSChoice opponentChoice, Guid? winner)
         {
+            CreatorId = creatorId;
+            CreatorChoice = creatorChoice;
+            OpponentId = opponentId;
+            OpponentChoice = opponentChoice;
+            Winner = winner;
         }
 
-        [JsonConstructor]
-        public RPSResult(Guid? winner, Dictionary<Guid, RPSChoice> dic)
+        public RPSChoice GetOpponentChoice(Guid id)
         {
-            Winner = winner;
-            Signs = dic;
+            if (CreatorId == id)
+            {
+                return OpponentChoice;
+            }
+
+            return CreatorChoice;
         }
     }
 }

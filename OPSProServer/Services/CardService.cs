@@ -11,16 +11,17 @@ namespace OPSProServer.Services
 {
     public class CardService : ICardService
     {
-
         private readonly ILogger<CardService> _logger;
         private readonly IOptions<OpsPro> _options;
         private List<CardInfo> _cards;
+        private Dictionary<string, ICardScript> _scripts;
 
         public CardService(ILogger<CardService> logger, IOptions<OpsPro> options)
         {
             _logger = logger;
             _options = options;
             _cards = new List<CardInfo>();
+            _scripts = new Dictionary<string, ICardScript>();
         }
 
         public IEnumerable<CardInfo> GetCardsInfo()
@@ -34,6 +35,27 @@ namespace OPSProServer.Services
 
                 string allText = File.ReadAllText(_options.Value.CardsPath!);
                 _cards = JsonSerializer.Deserialize<List<CardInfo>>(allText, options)!;
+
+                var allScriptsNumber = new List<string>();
+                foreach (var card in _cards)
+                {
+                    var serieNumber = card.GetScriptCode();
+                    var script = GetCardScript(serieNumber);
+                    if (!allScriptsNumber.Contains(serieNumber))
+                    {
+                        allScriptsNumber.Add(serieNumber);
+                    }
+
+                    if (script != null && !_scripts.ContainsKey(serieNumber))
+                    {
+                        _scripts.Add(serieNumber, script);
+                    }
+                }
+
+                var nbScripts = allScriptsNumber.Count;
+
+                _logger.LogInformation("{Count} card(s) found.", _cards.Count);
+                _logger.LogInformation("{Count}/{NbScripts} script(s) found.", _scripts.Values.Count, nbScripts);
             }
 
             return _cards;
@@ -44,39 +66,123 @@ namespace OPSProServer.Services
             return _cards.FirstOrDefault(x => x.Id == id);
         }
 
-        public ICardScript? GetCardScript(PlayingCard playingCard)
+        public ICardScript? GetCardScript(string serieNumber)
         {
-            var args = playingCard.CardInfo.Number.Split("-");
-            if (args.Length == 2)
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Type[] types = assembly.GetTypes();
+            foreach (Type type in types)
             {
-                var serie = args[0];
-                var number = args[1];
-
-                Assembly assembly = Assembly.GetExecutingAssembly();
-                Type[] types = assembly.GetTypes();
-                foreach (Type type in types)
+                if (typeof(ICardScript).IsAssignableFrom(type))
                 {
-                    if (typeof(ICardScript).IsAssignableFrom(type))
+                    var attribute = type.GetCustomAttribute<CardScriptAttribute>();
+                    if (attribute != null && attribute.GetScriptCode() == serieNumber)
                     {
-                        var attribute = type.GetCustomAttribute<CardScriptAttribute>();
-                        if (attribute != null && attribute.Serie == serie && attribute.Number == number)
+                        ConstructorInfo? constructor = type.GetConstructor(Type.EmptyTypes);
+                        if (constructor != null)
                         {
-                            ConstructorInfo? constructor = type.GetConstructor(new[] { typeof(PlayingCard) });
-                            if (constructor != null)
+                            ICardScript? instance = Activator.CreateInstance(type) as ICardScript;
+                            if (instance != null)
                             {
-                                ICardScript instance = Activator.CreateInstance(type, playingCard) as ICardScript;
                                 return instance;
                             }
                         }
                     }
                 }
-
-                _logger.LogWarning("Script file for serie {Serie} with number {Number} doesn't exists.", serie, number);
             }
 
-            _logger.LogError("Invalid card number {Number}", playingCard.CardInfo.Number);
+            _logger.LogWarning("Script file for number {Id} doesn't exists.", serieNumber);
 
             return null;
+        }
+
+        public ICardScript? GetCardScript(PlayingCard playingCard)
+        {
+            if (_scripts.ContainsKey(playingCard.CardInfo.GetScriptCode()))
+            {
+                return _scripts[playingCard.CardInfo.GetScriptCode()];
+            }
+
+            return null;
+        }
+
+        public bool IsBlocker(PlayingCard playingCard, User user, Game game)
+        {
+            if (playingCard.CardInfo.IsBlocker)
+            {
+                return true;
+            }
+
+            var script = GetCardScript(playingCard);
+            if (script != null)
+            {
+                return script.IsBlocker(user, game, playingCard);
+            }
+
+            return false;
+        }
+
+        public bool IsRusher(PlayingCard playingCard, User user, Game game)
+        {
+            if (playingCard.CardInfo.IsRush)
+            {
+                return true;
+            }
+
+            var script = GetCardScript(playingCard);
+            if (script != null)
+            {
+                return script.IsRusher(user, game, playingCard);
+            }
+
+            return false;
+        }
+
+        public bool IsDoubleAttack(PlayingCard playingCard, User user, Game game)
+        {
+            if (playingCard.CardInfo.IsDoubleAttack)
+            {
+                return true;
+            }
+
+            var script = GetCardScript(playingCard);
+            if (script != null)
+            {
+                return script.IsDoubleAttack(user, game, playingCard);
+            }
+
+            return false;
+        }
+
+        public bool IsBanish(PlayingCard playingCard, User user, Game game)
+        {
+            if (playingCard.CardInfo.IsBanish)
+            {
+                return true;
+            }
+
+            var script = GetCardScript(playingCard);
+            if (script != null)
+            {
+                return script.IsBanish(user, game, playingCard);
+            }
+
+            return false;
+        }
+
+        public bool IsTrigger(PlayingCard playingCard, User user, Game game)
+        {
+            if (playingCard.CardInfo.IsTrigger)
+            {
+                return true;
+            }
+
+            var script = GetCardScript(playingCard);
+            if (script != null)
+            {
+                return script.IsTrigger(user, game, playingCard);
+            }
+
+            return false;
         }
     }
 }

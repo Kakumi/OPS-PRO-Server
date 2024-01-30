@@ -51,6 +51,14 @@ namespace OPSProServer.Contracts.Models
             IsTrigger = isTrigger;
         }
 
+        public string GetScriptCode()
+        {
+            var args = Number.Split("-");
+            var serie = args[0];
+            var number = args[1].Split("_")[0];
+            return $"{serie}-{number}";
+        }
+
         public CardCategory CardCategory
         {
             get

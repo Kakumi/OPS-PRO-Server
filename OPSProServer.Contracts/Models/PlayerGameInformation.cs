@@ -11,6 +11,7 @@ namespace OPSProServer.Contracts.Models
     {
         public Guid UserId { get; private set; }
         public string Username { get; private set; }
+        public bool Waiting { get; set; }
         public DeckInfo SelectedDeck { get; private set; }
         public List<PlayingCard> Deck { get; private set; }
         public Stack<PlayingCard> Lifes { get; private set; }
@@ -19,11 +20,7 @@ namespace OPSProServer.Contracts.Models
         public int DonDeck { get; private set; }
         public int DonAvailable { get; private set; }
         public int DonRested { get; private set; }
-        public PlayingCard? Character1 { get; private set; }
-        public PlayingCard? Character2 { get; private set; }
-        public PlayingCard? Character3 { get; private set; }
-        public PlayingCard? Character4 { get; private set; }
-        public PlayingCard? Character5 { get; private set; }
+        public PlayingCard?[] Characters { get; private set; }
         public PlayingCard? Stage { get; private set; }
         public PlayingCard Leader { get; private set; }
         private IPhase? _currentPhase;
@@ -54,10 +51,11 @@ namespace OPSProServer.Contracts.Models
         }
 
         [JsonConstructor]
-        public PlayerGameInformation(Guid userId, string username, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard? character1, PlayingCard? character2, PlayingCard? character3, PlayingCard? character4, PlayingCard? character5, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
+        public PlayerGameInformation(Guid userId, string username, bool waiting, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard[] characters, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
         {
             UserId = userId;
             Username = username;
+            Waiting = waiting;
             SelectedDeck = selectedDeck;
             Deck = deck;
             Lifes = lifes;
@@ -66,11 +64,7 @@ namespace OPSProServer.Contracts.Models
             DonDeck = donDeck;
             DonAvailable = donAvailable;
             DonRested = donRested;
-            Character1 = character1;
-            Character2 = character2;
-            Character3 = character3;
-            Character4 = character4;
-            Character5 = character5;
+            Characters = characters;
             Stage = stage;
             Leader = leader;
             CurrentPhaseType = currentPhaseType;
@@ -85,6 +79,7 @@ namespace OPSProServer.Contracts.Models
 
             UserId = userId;
             Username = username;
+            Waiting = false;
             SelectedDeck = selectedDeck;
             Deck = new List<PlayingCard>();
             Lifes = new Stack<PlayingCard>();
@@ -93,17 +88,14 @@ namespace OPSProServer.Contracts.Models
             DonDeck = 10;
             DonAvailable = 0;
             DonRested = 0;
-            Character1 = null;
-            Character2 = null;
-            Character3 = null;
-            Character4 = null;
-            Character5 = null;
+            Characters = new PlayingCard[5];
             Stage = null;
             CurrentPhase = phase;
 
             var leaderCard = selectedDeck.GetLeader();
 
             Leader = new PlayingCard(leaderCard!);
+            Leader.VisibleForOpponent = true;
 
             Initialize(selectedDeck);
         }
@@ -120,11 +112,6 @@ namespace OPSProServer.Contracts.Models
             ShuffleDeck();
 
             DrawCard(5);
-
-#if DEBUG
-            Character1 = Hand.First();
-            //Hand.RemoveAll(x => x.Id == Character1.Id);
-#endif
 
             RemoveDeckCards(leaderCard!.Cost).ForEach(x =>
             {
@@ -143,109 +130,44 @@ namespace OPSProServer.Contracts.Models
 
         public List<PlayingCard> GetCharacters()
         {
-            var list = new List<PlayingCard>();
-            if (Character1 != null)
-            {
-                list.Add(Character1);
-            }
-            if (Character2 != null)
-            {
-                list.Add(Character2);
-            }
-            if (Character3 != null)
-            {
-                list.Add(Character3);
-            }
-            if (Character4 != null)
-            {
-                list.Add(Character4);
-            }
-            if (Character5 != null)
-            {
-                list.Add(Character5);
-            }
-
-            return list;
+            return Characters.Where(x => x != null).ToList()!;
         }
 
         public PlayingCard? GetCharacter(Guid id)
+        {
+            return Characters.FirstOrDefault(x => x != null && x.Id == id);
+        }
+
+        public PlayingCard? GetAttacker(Guid id)
         {
             if (Leader != null && Leader.Id == id)
             {
                 return Leader;
             }
 
-            if (Character1 != null && Character1.Id == id)
-            {
-                return Character1;
-            }
+            return GetCharacter(id);
+        }
 
-            if (Character2 != null && Character2.Id == id)
+        public PlayingCard? KillCharacter(Guid id)
+        {
+            for(int i = 0; i < Characters.Length; i++)
             {
-                return Character2;
-            }
-
-            if (Character3 != null && Character3.Id == id)
-            {
-                return Character3;
-            }
-
-            if (Character4 != null && Character4.Id == id)
-            {
-                return Character4;
-            }
-
-            if (Character5 != null && Character5.Id == id)
-            {
-                return Character5;
+                var character = Characters[i];
+                if (character != null && character.Id == id)
+                {
+                    TrashCard(character);
+                    Characters[i] = null;
+                    return character;
+                }
             }
 
             return null;
         }
 
-        public bool KillCharacter(Guid id)
-        {
-            if (Character1 != null && Character1.Id == id)
-            {
-                Trash.Add(Character1);
-                Character1 = null;
-                return true;
-            }
-
-            if (Character2 != null && Character2.Id == id)
-            {
-                Trash.Add(Character2);
-                Character2 = null;
-                return true;
-            }
-
-            if (Character3 != null && Character3.Id == id)
-            {
-                Trash.Add(Character3);
-                Character3 = null;
-                return true;
-            }
-
-            if (Character4 != null && Character4.Id == id)
-            {
-                Trash.Add(Character4);
-                Character4 = null;
-                return true;
-            }
-
-            if (Character5 != null && Character5.Id == id)
-            {
-                Trash.Add(Character5);
-                Character5 = null;
-                return true;
-            }
-
-            return false;
-        }
-
         public void AddDeckCard(PlayingCard playingCard)
         {
             playingCard.ResetTurn();
+            playingCard.VisibleForOpponent = true;
             Deck.Add(playingCard);
         }
 
@@ -284,12 +206,27 @@ namespace OPSProServer.Contracts.Models
         public void AddHandCard(PlayingCard playingCard)
         {
             playingCard.ResetTurn();
+            playingCard.VisibleForOpponent = false;
             Hand.Add(playingCard);
+        }
+
+        public PlayingCard? RemoveFromHand(Guid id)
+        {
+            var card = Hand.FirstOrDefault(x => x.Id == id);
+            if (card != null)
+            {
+                card.VisibleForOpponent = true;
+                Hand.RemoveAll(x => x.Id == id);
+                return card;
+            }
+
+            return null;
         }
 
         public void AddLifeCard(PlayingCard playingCard)
         {
             playingCard.ResetTurn();
+            playingCard.VisibleForOpponent = false;
             Lifes.Push(playingCard);
         }
 
@@ -343,6 +280,7 @@ namespace OPSProServer.Contracts.Models
         public void TrashCard(PlayingCard playingCard)
         {
             playingCard.ResetTurn();
+            playingCard.VisibleForOpponent = true;
             Trash.Add(playingCard);
         }
 
@@ -361,61 +299,24 @@ namespace OPSProServer.Contracts.Models
             throw new NotImplementedException();
         }
 
-        public PlayingCard Summon(Guid guid)
+        public bool HasEmptyCharacter()
         {
-            var handCard = Hand.FirstOrDefault(x => x.Id == guid);
-            if (handCard != null)
-            {
-                if (DonAvailable < handCard.GetTotalCost())
-                {
-                    throw new ErrorUserActionException(UserId, "GAME_NOT_ENOUGH_DON_CARDS", DonAvailable.ToString(), handCard.GetTotalCost().ToString());
-                }
-
-                if (SetFirstEmptyCharacters(handCard))
-                {
-                    UseDonCard(handCard.GetTotalCost());
-                    Hand.RemoveAll(x => x.Id == guid);
-                    return handCard;
-                }
-                else
-                {
-                    throw new ErrorUserActionException(UserId, "GAME_BOARD_CHARACTERS_FULL");
-                }
-            }
-
-            throw new ErrorUserActionException(UserId, "GAME_CARD_NOT_FOUND");
+            return Characters.Any(x => x == null);
         }
 
         public bool SetFirstEmptyCharacters(PlayingCard playingCard)
         {
-            if (Character1 == null)
+            if (HasEmptyCharacter())
             {
-                Character1 = playingCard;
-                return true;
-            }
-
-            if (Character2 == null)
-            {
-                Character2 = playingCard;
-                return true;
-            }
-
-            if (Character3 == null)
-            {
-                Character3 = playingCard;
-                return true;
-            }
-
-            if (Character4 == null)
-            {
-                Character4 = playingCard;
-                return true;
-            }
-
-            if (Character5 == null)
-            {
-                Character5 = playingCard;
-                return true;
+                for(int i = 0; i < Characters.Length; i++)
+                {
+                    if (Characters[i] == null)
+                    {
+                        playingCard.VisibleForOpponent = true;
+                        Characters[i] = playingCard;
+                        return true;
+                    }
+                }
             }
 
             return false;
@@ -433,6 +334,52 @@ namespace OPSProServer.Contracts.Models
             {
                 character.IncrementTurn();
             }
+        }
+
+        public PlayingCard? GetCard(Guid id)
+        {
+            PlayingCard? card = GetAttacker(id);
+            if (card == null)
+            {
+                if (Stage != null && Stage.Id == id)
+                {
+                    return Stage;
+                }
+
+                return Hand.FirstOrDefault(x => x.Id == id);
+            }
+
+            return card;
+        }
+
+        public PlayingCard? SetStage(PlayingCard card)
+        {
+            var trashCard = Stage;
+            if (Stage != null)
+            {
+                TrashCard(Stage);
+            }
+
+            card.VisibleForOpponent = true;
+            Stage = card;
+            return trashCard;
+        }
+
+        public PlayingCard? ReplaceCharacter(PlayingCard card, Guid replaceId)
+        {
+            for (int i = 0; i < Characters.Length; i++)
+            {
+                var character = Characters[i];
+                if (character != null && character.Id == replaceId)
+                {
+                    TrashCard(character);
+                    card.VisibleForOpponent = true;
+                    Characters[i] = card;
+                    return character;
+                }
+            }
+
+            return null;
         }
     }
 }

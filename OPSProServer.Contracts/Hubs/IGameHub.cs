@@ -59,7 +59,5 @@ namespace OPSProServer.Contracts.Hubs
         Task<bool> ActivateCardEffect(Guid userId, Guid characterCardId);
 
         Task<bool> Summon(Guid userId, Guid cardId);
-
-        Task<bool> ResolveAction(Guid userId, Guid actionId, List<Guid> cards);
     }
 }

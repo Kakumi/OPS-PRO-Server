@@ -8,17 +8,15 @@ namespace OPSProServer.Contracts.Models
 {
     public interface ICardScript
     {
-        public PlayingCard PlayingCard { get; }
+        public bool IsBlocker(User user, Game game, PlayingCard playingCard);
 
-        public bool IsBlocker(User user, Game game);
+        public bool IsRusher(User user, Game game, PlayingCard playingCard);
 
-        public bool IsRusher(User user, Game game);
+        public bool IsDoubleAttack(User user, Game game, PlayingCard playingCard);
 
-        public bool IsDoubleAttack(User user, Game game);
+        public bool IsBanish(User user, Game game, PlayingCard playingCard);
 
-        public bool IsBanish(User user, Game game);
-
-        public bool IsTrigger(User user, Game game);
+        public bool IsTrigger(User user, Game game, PlayingCard playingCard);
 
         ///// <summary>
         ///// <para>Tell if the card can use his On Play event</para>
@@ -60,6 +58,8 @@ namespace OPSProServer.Contracts.Models
         //public void OnTrigger();
         //public void OnActivate();
         //public void OnOpponentTurn();
-        public void OnGiveDon(User user, Game game);
+        public void OnGiveDon(User user, Game game, PlayingCard playingCard);
+
+        public void OnTrash(User user, Game game, PlayingCard playingCard);
     }
 }

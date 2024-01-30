@@ -16,7 +16,7 @@ namespace OPSProServer.Contracts.Models
 
         public bool IsJoinable(User user, string? password)
         {
-            return Opponent == null && Creator.Id != user.Id && Password == password;
+            return Opponent == null && Creator.Id != user.Id && (string.IsNullOrEmpty(Password) || Password == password);
         }
 
         public Game StartGame(Guid userToStart)
@@ -62,7 +62,7 @@ namespace OPSProServer.Contracts.Models
 
             var winnerId = GetRPSWinnerId();
 
-            return new RPSResult(winnerId, dic);
+            return new RPSResult(Creator.Id, Creator.RPSChoice, Opponent!.Id, Opponent.RPSChoice, winnerId);
         }
     }
 }

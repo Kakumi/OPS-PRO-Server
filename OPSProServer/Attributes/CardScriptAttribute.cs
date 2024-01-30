@@ -10,5 +10,10 @@
             Serie = serie;
             Number = number;
         }
+
+        public string GetScriptCode()
+        {
+            return $"{Serie}-{Number}";
+        }
     }
 }

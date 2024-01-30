@@ -32,14 +32,15 @@ namespace OPSProServer.Hubs.Filters
                 {
                     await invocationContext.Hub.Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserAlertMessage), new UserAlertMessage(ex.Message, ex.Args));
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, ex.Message);
-                throw;
             }
 
-            return null;
+            return false;
         }
     }
 }

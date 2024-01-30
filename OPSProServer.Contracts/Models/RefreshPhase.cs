@@ -33,10 +33,12 @@ namespace OPSProServer.Contracts.Models
             playerInfo.UnrestCostDeck();
             playerInfo.GetCharacters().ForEach(x =>
             {
+                x.DonCard = 0;
                 x.Rested = false;
                 x.RemoveStatDuration(ModifierDuration.OpponentTurn);
             });
 
+            playerInfo.Leader.DonCard = 0;
             playerInfo.Leader.Rested = false;
             playerInfo.Leader.RemoveStatDuration(ModifierDuration.OpponentTurn);
         }

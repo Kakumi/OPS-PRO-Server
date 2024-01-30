@@ -11,6 +11,7 @@
         Board,
         Character,
         Leader,
+        Stage,
         OpponentHand,
         OpponentDeck,
         OpponentTrash,
@@ -20,5 +21,6 @@
         OpponentBoard,
         OpponentCharacter,
         OpponentLeader,
+        OpponentStage,
     }
 }

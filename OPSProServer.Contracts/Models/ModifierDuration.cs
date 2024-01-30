@@ -3,6 +3,8 @@
     public enum ModifierDuration
     {
         Attack,
+        Defense,
+        Battle,
         Turn,
         OpponentTurn,
         Duel

@@ -45,7 +45,7 @@ namespace OPSProServer.Hubs.Filters
                 return await next(invocationContext);
             }
 
-            return null;
+            return false;
         }
     }
 }

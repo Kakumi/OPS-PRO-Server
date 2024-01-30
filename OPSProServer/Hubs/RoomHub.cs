@@ -2,6 +2,7 @@
 using OPSProServer.Contracts.Events;
 using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Models;
+using System.ComponentModel;
 
 namespace OPSProServer.Hubs
 {
@@ -70,8 +71,6 @@ namespace OPSProServer.Hubs
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     _logger.LogInformation("User {Id} joined room sucessfully", id);
 
-                    await Exclude(Guid.NewGuid(), id, roomId);
-
                     return true;
                 }
 
@@ -106,7 +105,7 @@ namespace OPSProServer.Hubs
                 var room = _roomManager.GetRoom(user);
                 if (room != null)
                 {
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.Id.ToString());
+                    await Groups.RemoveFromGroupAsync(user.ConnectionId, room.Id.ToString());
 
                     if (room.Creator.Id == user.Id)
                     {
@@ -124,8 +123,17 @@ namespace OPSProServer.Hubs
                     else if (room.Opponent?.Id == user.Id)
                     {
                         _logger.LogInformation("The leaver is the opponent, remove the user from the room {Id}.", room.Id);
-                        room.SetOpponent(null);
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+                        if (room.Game != null)
+                        {
+                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomDeleted));
+                            await Groups.RemoveFromGroupAsync(room.Creator.ConnectionId, room.Id.ToString());
+                            _roomManager.RemoveRoom(room.Id);
+                        } else
+                        {
+                            room.SetOpponent(null);
+                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+
+                        }
                     }
                 }
             }
@@ -197,13 +205,12 @@ namespace OPSProServer.Hubs
             try
             {
                 var user = _userManager.GetUser(userId);
-                var opponent = _userManager.GetUser(opponentId);
                 var room = _roomManager.GetRoom(roomId);
 
-                if (user != null && opponent != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
+                if (user != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
                 {
+                    var opponent = room.GetOpponent(userId)!;
                     room.SetOpponent(null);
-
                     await Groups.RemoveFromGroupAsync(opponent.ConnectionId, room.Id.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
                     await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IRoomHubEvent.RoomExcluded));
