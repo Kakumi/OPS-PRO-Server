@@ -15,7 +15,5 @@ namespace OPSProServer.Services
         public bool IsDoubleAttack(PlayingCard playingCard, User user, Game game);
 
         public bool IsBanish(PlayingCard playingCard, User user, Game game);
-
-        public bool IsTrigger(PlayingCard playingCard, User user, Game game);
     }
 }

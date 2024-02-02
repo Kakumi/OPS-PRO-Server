@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using OPSProServer.Attributes;
 using OPSProServer.Contracts.Events;
 using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Models;
@@ -8,45 +9,35 @@ namespace OPSProServer.Hubs
 {
     public partial class GameHub : Hub, IRoomHub
     {
-        public async Task<bool> CreateRoom(Guid id, string? password, string? description)
+        [Connected]
+        public async Task<bool> CreateRoom(string? password, string? description)
         {
-            try
-            {
-                var hasPassword = !string.IsNullOrEmpty(password);
-                _logger.LogInformation("Creating room for user {Id} with password: {HasPassword} and description: {Description}", id, hasPassword, description);
-                var user = _userManager.GetUser(id);
-                if (user != null)
-                {
-                    var room = new Room(user, description, password);
+            var user = Context.Items["user"] as User; 
+            var hasPassword = !string.IsNullOrEmpty(password);
+
+            _logger.LogInformation("Creating room for user {Id} with password: {HasPassword} and description: {Description}", user!.Id, hasPassword, description);
+
+            var room = new Room(user, description, password);
 
 #if DEBUG
-                    room.SetOpponent(new User("serverbot", "Server Bot"));
-                    room.Opponent!.RPSChoice = RPSChoice.Paper;
+            room.SetOpponent(new User("serverbot", "Server Bot"));
+            room.Opponent!.RPSChoice = RPSChoice.Paper;
 #endif
 
-                    _roomManager.AddRoom(room);
+            _roomManager.AddRoom(room);
 
-                    await Groups.AddToGroupAsync(Context.ConnectionId, room.Id.ToString());
+            await Groups.AddToGroupAsync(Context.ConnectionId, room.Id.ToString());
 
-                    _logger.LogInformation("Room created. Id: {Id}", room.Id);
+            _logger.LogInformation("Room created. Id: {Id}", room.Id);
 
-                    return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+            return true;
         }
 
+        [Connected]
         public Task<List<SecureRoom>> GetRooms()
         {
             try
             {
-                //Remove password from room
                 var rooms = _roomManager.GetRooms().Select(x => x as SecureRoom).ToList();
                 return Task.FromResult(rooms);
             }
@@ -57,45 +48,31 @@ namespace OPSProServer.Hubs
             }
         }
 
-        public async Task<bool> JoinRoom(Guid id, Guid roomId, string? password)
+        [Connected]
+        public async Task<bool> JoinRoom(Guid roomId, string? password)
         {
-            try
-            {
-                _logger.LogInformation("User {Id} try to join room {RoomId}", id, roomId);
-                var user = _userManager.GetUser(id);
-                var room = _roomManager.GetRoom(roomId);
-                if (user != null && room != null && room.IsJoinable(user, password))
-                {
-                    room.SetOpponent(user);
-                    await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
-                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
-                    _logger.LogInformation("User {Id} joined room sucessfully", id);
+            var user = Context.Items["user"] as User;
 
-                    return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
+            _logger.LogInformation("User {Id} try to join room {RoomId}", user!.Id, roomId);
+            var room = _roomManager.GetRoom(roomId);
+            if (user != null && room != null && room.IsJoinable(user, password))
             {
-                _logger.LogError(ex, ex.Message);
-                return false;
+                room.SetOpponent(user);
+                await Groups.AddToGroupAsync(Context.ConnectionId, roomId.ToString());
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+                _logger.LogInformation("User {Id} joined room sucessfully", user.Id);
+
+                return true;
             }
+
+            return false;
         }
 
-        public async Task<bool> LeaveRoom(Guid id)
+        [Connected(true)]
+        public async Task<bool> LeaveRoom()
         {
-            try
-            {
-                _logger.LogInformation("User: {Id} try to leave his current room.", id);
-                var user = _userManager.GetUser(id);
-                return await LeaveRoom(user);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+            var user = Context.Items["user"] as User;
+            return await LeaveRoom(user);
         }
 
         protected async Task<bool> LeaveRoom(User? user)
@@ -141,75 +118,55 @@ namespace OPSProServer.Hubs
             return true;
         }
 
-        public async Task<bool> SetReady(Guid userId, string name, List<string> cardsId)//DeckInfo? deckInfo)
+        [Connected(true)]
+        public async Task<bool> SetReady(string name, List<string> cardsId)//DeckInfo? deckInfo)
         {
-            try
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+
+            DeckInfo deckInfo = new DeckInfo(name);
+            foreach (var cardId in cardsId)
             {
-                var user = _userManager.GetUser(userId);
-                if (user != null)
+                var cardInfo = _cardService.GetCardInfo(cardId);
+                if (cardInfo != null)
                 {
-                    var room = _roomManager.GetRoom(user);
-                    if (room != null)
-                    {
-                        DeckInfo deckInfo = new DeckInfo(name);
-                        foreach (var cardId in cardsId)
-                        {
-                            var cardInfo = _cardService.GetCardInfo(cardId);
-                            if (cardInfo != null)
-                            {
-                                deckInfo.Cards.Add(cardInfo);
-                            }
-                        }
+                    deckInfo.Cards.Add(cardInfo);
+                }
+            }
 
-                        if (deckInfo == null || !deckInfo.IsValid())
-                        {
-                            return false;
-                        }
+            if (deckInfo == null || !deckInfo.IsValid())
+            {
+                return false;
+            }
 
-                        var userRoom = room.GetUserRoom(user);
-                        if (userRoom != null)
-                        {
-                            _logger.LogInformation("Update status for the creator {UserId} to {Ready}.", userId, true);
-                            userRoom.Deck = deckInfo;
-                        }
+            var userRoom = room!.GetUserRoom(user!);
+            if (userRoom != null)
+            {
+                _logger.LogInformation("Update status for the creator {UserId} to {Ready}.", user.Id, true);
+                userRoom.Deck = deckInfo;
+            }
 
 #if DEBUG
-                        room.Opponent!.Deck = deckInfo;
+            room.Opponent!.Deck = deckInfo;
 #endif
 
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
 
-                        return true;
-                    }
-                    else
-                    {
-                        _logger.LogInformation("Failed to update ready status for the user {UserId}, room doesn't exist.", userId);
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("Failed to update ready status for the user {UserId}, user doesn't exist.", userId);
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+            return true;
         }
+    
 
-        public async Task<bool> Exclude(Guid userId, Guid opponentId, Guid roomId)
+        [Connected(true)]
+        public async Task<bool> Exclude(Guid opponentId, Guid roomId)
         {
             try
             {
-                var user = _userManager.GetUser(userId);
-                var room = _roomManager.GetRoom(roomId);
+                var user = Context.Items["user"] as User;
+                var room = Context.Items["room"] as Room;
 
-                if (user != null && room != null && room.Creator.Id == userId && room.Opponent?.Id == opponentId)
+                if (user != null && room != null && room.Creator.Id == user.Id && room.Opponent?.Id == opponentId)
                 {
-                    var opponent = room.GetOpponent(userId)!;
+                    var opponent = room.GetOpponent(user.Id)!;
                     room.SetOpponent(null);
                     await Groups.RemoveFromGroupAsync(opponent.ConnectionId, room.Id.ToString());
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IRoomHubEvent.RoomUpdated), room);
@@ -227,19 +184,11 @@ namespace OPSProServer.Hubs
             }
         }
 
-        public Task<SecureRoom> GetRoom(Guid userId)
+        [Connected(true)]
+        public Task<SecureRoom> GetRoom()
         {
-            var user = _userManager.GetUser(userId);
-            if (user != null)
-            {
-                var room = _roomManager.GetRoom(user);
-                if (room != null)
-                {
-                    return Task.FromResult((SecureRoom) room);
-                }
-            }
-
-            return Task.FromResult<SecureRoom>(null);
+            var room = Context.Items["room"]!;
+            return Task.FromResult((SecureRoom)room);
         }
     }
 }

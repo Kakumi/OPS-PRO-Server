@@ -15,7 +15,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="password"></param>
         /// <param name="description"></param>
         /// <returns></returns>
-        Task<bool> CreateRoom(Guid userId, string? password, string? description);
+        Task<bool> CreateRoom(string? password, string? description);
 
         /// <summary>
         /// Get all rooms.
@@ -28,7 +28,7 @@ namespace OPSProServer.Contracts.Hubs
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
-        Task<SecureRoom> GetRoom(Guid userId);
+        Task<SecureRoom> GetRoom();
 
         /// <summary>
         /// <para>Join a room.</para>
@@ -38,7 +38,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="roomId"></param>
         /// <param name="password"></param>
         /// <returns></returns>
-        Task<bool> JoinRoom(Guid userId, Guid roomId, string? password);
+        Task<bool> JoinRoom(Guid roomId, string? password);
 
         /// <summary>
         /// <para>Leave a room.</para>
@@ -47,7 +47,7 @@ namespace OPSProServer.Contracts.Hubs
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
-        Task<bool> LeaveRoom(Guid userId);
+        Task<bool> LeaveRoom();
 
         /// <summary>
         /// <para>Set the user as ready for his current room.</para>
@@ -56,7 +56,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userId"></param>
         /// <param name="deckInfo"></param>
         /// <returns></returns>
-        Task<bool> SetReady(Guid userId, string name, List<string> cardsId);//DeckInfo? deckInfo);
+        Task<bool> SetReady(string name, List<string> cardsId);//DeckInfo? deckInfo);
 
         /// <summary>
         /// <para>Exclude a user from the room.</para>
@@ -67,6 +67,6 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="opponentId"></param>
         /// <param name="roomId"></param>
         /// <returns></returns>
-        Task<bool> Exclude(Guid userId, Guid opponentId, Guid roomId);
+        Task<bool> Exclude(Guid opponentId, Guid roomId);
     }
 }

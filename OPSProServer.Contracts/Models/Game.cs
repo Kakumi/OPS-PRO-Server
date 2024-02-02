@@ -117,7 +117,7 @@ namespace OPSProServer.Contracts.Models
         public bool CanAttack(Guid userId, Guid attacker)
         {
             var myGameInfo = GetMyPlayerInformation(userId);
-            var attackerCard = myGameInfo.GetAttacker(attacker);
+            var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
 
             return Turn > 1 && attackerCard != null && (attackerCard.Turn > 1 || attackerCard.CardInfo.IsRush) && !attackerCard.Rested;
         }

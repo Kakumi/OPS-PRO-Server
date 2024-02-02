@@ -8,8 +8,8 @@ namespace OPSProServer.Contracts.Hubs
 {
     public interface IResolverHub
     {
-        Task<bool> ResolveAction(Guid userId, Guid actionId, List<Guid> cards);
+        //Task<bool> ResolveAction(Guid userId, Guid actionId, List<Guid> cards);
 
-        Task<bool> ResolveAskAction(Guid userId, Guid actionId, bool value);
+        //Task<bool> ResolveAskAction(Guid userId, Guid actionId, bool value);
     }
 }

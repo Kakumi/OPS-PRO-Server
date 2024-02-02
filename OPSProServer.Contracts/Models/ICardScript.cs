@@ -16,8 +16,6 @@ namespace OPSProServer.Contracts.Models
 
         public bool IsBanish(User user, Game game, PlayingCard playingCard);
 
-        public bool IsTrigger(User user, Game game, PlayingCard playingCard);
-
         ///// <summary>
         ///// <para>Tell if the card can use his On Play event</para>
         ///// </summary>
@@ -61,5 +59,6 @@ namespace OPSProServer.Contracts.Models
         public void OnGiveDon(User user, Game game, PlayingCard playingCard);
 
         public void OnTrash(User user, Game game, PlayingCard playingCard);
+        RuleResponse OnTrigger(User user, Game game, PlayingCard playingCard);
     }
 }

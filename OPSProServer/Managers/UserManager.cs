@@ -1,4 +1,5 @@
 ﻿using OPSProServer.Contracts.Models;
+using System.Collections.Generic;
 
 namespace OPSProServer.Managers
 {
@@ -32,6 +33,11 @@ namespace OPSProServer.Managers
         public void RemoveUser(User user)
         {
             _users.Remove(user);
+        }
+
+        public IReadOnlyList<User> GetUsers()
+        {
+            return _users;
         }
     }
 }

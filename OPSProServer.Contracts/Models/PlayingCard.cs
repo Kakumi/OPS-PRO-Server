@@ -118,7 +118,7 @@ namespace OPSProServer.Contracts.Models
 
         internal void ResetTurn()
         {
-            Turn = 0;
+            Turn = 1;
         }
 
         public bool HasTag(string tag)

@@ -15,6 +15,7 @@ using OPSProServer.Services;
 using SignalR_UnitTestingSupportCommon.IHubContextSupport;
 using SignalR_UnitTestingSupportMSTest.Hubs;
 using System.Diagnostics;
+using System.Runtime.Intrinsics.X86;
 
 namespace OPSProServer.Tests
 {
@@ -23,10 +24,12 @@ namespace OPSProServer.Tests
     {
         private IUserManager _userManager;
         private IRoomManager _roomManager;
-        private IResolverManager _resolverManager;
+        private IFlowManager _resolverManager;
         private ICardService _cardService;
         private IGameRuleService _gameRuleEngine;
         private GameHub _roomHub;
+        private GameHub _roomHub2;
+        private GameHub _roomHub3;
         private User _user1;
         private User _user2;
         private User _user3;
@@ -44,23 +47,37 @@ namespace OPSProServer.Tests
             var mockGroupManager = new Mock<IGroupManager>();
             var mockRuleEngine = new Mock<IGameRuleService>();
             var mockHubCallerContext = new Mock<HubCallerContext>();
-
             mockHubCallerContext.SetupGet(c => c.ConnectionId).Returns("unit_test");
             mockHubCallerContext.SetupGet(c => c.UserIdentifier).Returns("unit_test");
 
+            var mockHubCallerContext2 = new Mock<HubCallerContext>();
+            mockHubCallerContext.SetupGet(c => c.ConnectionId).Returns("unit_test2");
+            mockHubCallerContext.SetupGet(c => c.UserIdentifier).Returns("unit_test2");
+
+            var mockHubCallerContext3 = new Mock<HubCallerContext>();
+            mockHubCallerContext.SetupGet(c => c.ConnectionId).Returns("unit_test3");
+            mockHubCallerContext.SetupGet(c => c.UserIdentifier).Returns("unit_test3");
+
             _userManager = new UserManager();
             _roomManager = new RoomManager();
-            _resolverManager = new ResolverManager();
+            _resolverManager = new FlowManager();
             IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
             _cardService = new CardService(mockCardServiceLogger.Object, options);
             _gameRuleEngine = new GameRuleService(_cardService);
             _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
+            _roomHub2 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
+            _roomHub3 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
             AssignToHubRequiredProperties(_roomHub);
-            _roomHub.Context = mockHubCallerContext.Object;
+            AssignToHubRequiredProperties(_roomHub2);
+            AssignToHubRequiredProperties(_roomHub3);
 
             _user1 = new User("unit_test", "UnitTest");
             _user2 = new User("unit_test2", "UnitTest2");
             _user3 = new User("unit_test3", "UnitTest3");
+
+            _roomHub.Context = mockHubCallerContext.Object;
+            _roomHub2.Context = mockHubCallerContext2.Object;
+            _roomHub3.Context = mockHubCallerContext3.Object;
 
             _userManager.AddUser(_user1);
             _userManager.AddUser(_user2);
@@ -83,7 +100,7 @@ namespace OPSProServer.Tests
         public async Task CreateRoomNormal()
         {
             var description = "Has description";
-            var success = await _roomHub.CreateRoom(_user1.Id, null, description);
+            var success = await _roomHub.CreateRoom(null, description);
 
             Assert.IsTrue(success);
 
@@ -102,7 +119,7 @@ namespace OPSProServer.Tests
         public async Task CreateRoomWithPassword()
         {
             var password = "unit_test_586";
-            var success = await _roomHub.CreateRoom(_user1.Id, password, null);
+            var success = await _roomHub.CreateRoom(password, null);
 
             Assert.IsTrue(success);
 
@@ -121,7 +138,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task GetRooms()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -135,11 +152,11 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task GetRoom()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
-            var room = await _roomHub.GetRoom(_user1.Id);
+            var room = await _roomHub.GetRoom();
 
             Assert.IsNotNull(room);
             Assert.IsNotNull(room.Created);
@@ -154,7 +171,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task JoinRoomNormal()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -164,13 +181,13 @@ namespace OPSProServer.Tests
 
             room.SetOpponent(_user3);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsFalse(joined);
 
             room.SetOpponent(null);
 
-            joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
 
@@ -188,7 +205,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task JoinRoomWithPassword()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, "123", null);
+            var success = await _roomHub.CreateRoom("123", null);
 
             Assert.IsTrue(success);
 
@@ -196,11 +213,11 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, "1234");
+            var joined = await _roomHub2.JoinRoom(room.Id, "1234");
 
             Assert.IsFalse(joined);
 
-            joined = await _roomHub.JoinRoom(_user2.Id, room.Id, "123");
+            joined = await _roomHub2.JoinRoom(room.Id, "123");
 
             Assert.IsTrue(joined);
 
@@ -218,7 +235,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task LeaveRoomAsCreator()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -226,12 +243,12 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var left = await _roomHub.LeaveRoom(_user1.Id);
+            var left = await _roomHub.LeaveRoom();
 
             ClientsGroupMock.Verify(
                 x => x.SendCoreAsync(
@@ -252,7 +269,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task LeaveRoomAsOpponent()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -260,12 +277,12 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var left = await _roomHub.LeaveRoom(_user2.Id);
+            var left = await _roomHub2.LeaveRoom();
 
             ClientsGroupMock.Verify(
                 x => x.SendCoreAsync(
@@ -281,7 +298,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task ExcludeAsCreator()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -289,12 +306,12 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var excluded = await _roomHub.Exclude(_user1.Id, _user2.Id, room.Id);
+            var excluded = await _roomHub.Exclude(_user2.Id, room.Id);
 
             ClientsGroupMock.Verify(
                 x => x.SendCoreAsync(
@@ -317,7 +334,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task ExcludeAsOpponent()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -325,13 +342,13 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var excluded = await _roomHub.Exclude(_user2.Id, _user1.Id, room.Id);
-            var excluded2 = await _roomHub.Exclude(_user1.Id, _user3.Id, room.Id);
+            var excluded = await _roomHub.Exclude(_user2.Id, room.Id);
+            var excluded2 = await _roomHub.Exclude(_user3.Id, room.Id);
 
             Assert.IsFalse(excluded);
             Assert.IsFalse(excluded2);
@@ -340,7 +357,7 @@ namespace OPSProServer.Tests
         [TestMethod]
         public async Task SetReady()
         {
-            var success = await _roomHub.CreateRoom(_user1.Id, null, null);
+            var success = await _roomHub.CreateRoom(null, null);
 
             Assert.IsTrue(success);
 
@@ -348,13 +365,13 @@ namespace OPSProServer.Tests
 
             Assert.IsNotNull(room);
 
-            var joined = await _roomHub.JoinRoom(_user2.Id, room.Id, null);
+            var joined = await _roomHub2.JoinRoom(room.Id, null);
 
             Assert.IsTrue(joined);
             Assert.IsNotNull(room.Opponent);
 
-            var readyEmpty = await _roomHub.SetReady(_user1.Id, null, null);
-            var ready = await _roomHub.SetReady(_user1.Id, _deckInfo.Name, _deckInfo.Cards.Select(x => x.Id).ToList());
+            var readyEmpty = await _roomHub.SetReady(null, null);
+            var ready = await _roomHub.SetReady(_deckInfo.Name, _deckInfo.Cards.Select(x => x.Id).ToList());
 
             ClientsGroupMock.Verify(
                 x => x.SendCoreAsync(

@@ -63,10 +63,18 @@ namespace OPSProServer.Contracts.Events
         /// <summary>
         /// <para>When an event has trigger and a user has to respond to this event.</para>
         /// <para>Can be use for blocker, counter, opponent turn, ...</para>
-        /// <para>Need to call <see cref="IGameHub.ResolveAction"/> to resolve.</para>
+        /// <para>Need to call <see cref="IResolverHub.ResolveAction(Guid, Guid, List{Guid})"/> or <see cref="IResolverHub.ResolveAskAction(Guid, Guid, bool)"/> to resolve.</para>
         /// </summary>
         /// <returns></returns>
         UserResolver AskUserAction();
+
+        /// <summary>
+        /// <para>When an event has trigger and a user has to respond to this event.</para>
+        /// <para>Can be use for blocker, counter, opponent turn, card script, ...</para>
+        /// <para>Need to call <see cref="IResolverHub.ResolveAction(Guid, Guid, List{Guid})"/> or <see cref="IResolverHub.ResolveAskAction(Guid, Guid, bool)"/> to resolve.</para>
+        /// </summary>
+        /// <returns></returns>
+        FlowActionRequest FlowActionRequest();
 
         /// <summary>
         /// <para>When the game is finished and there is a winner</para>

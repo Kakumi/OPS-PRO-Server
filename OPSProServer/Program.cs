@@ -11,13 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR(hubOptions =>
 {
     hubOptions.AddFilter<ErrorHandlerFilter>();
-    hubOptions.AddFilter<PlayerTurnFilter>();
+    hubOptions.AddFilter<UserConnectedHubFilter>();
 });
 builder.Services.Configure<OpsPro>(builder.Configuration.GetSection("OpsPro"));
 builder.Services.AddSingleton<IRoomManager, RoomManager>();
 builder.Services.AddSingleton<IUserManager, UserManager>();
-builder.Services.AddSingleton<IResolverManager, ResolverManager>();
-builder.Services.AddScoped<PlayerTurnFilter>();
+builder.Services.AddSingleton<IFlowManager, FlowManager>();
+builder.Services.AddScoped<UserConnectedHubFilter>();
 builder.Services.AddScoped<ErrorHandlerFilter>();
 builder.Services.AddSingleton<ICardService, CardService>();
 builder.Services.AddSingleton<IGameRuleService, GameRuleService>();

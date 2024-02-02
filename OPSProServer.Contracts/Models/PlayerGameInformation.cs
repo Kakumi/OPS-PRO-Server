@@ -138,7 +138,7 @@ namespace OPSProServer.Contracts.Models
             return Characters.FirstOrDefault(x => x != null && x.Id == id);
         }
 
-        public PlayingCard? GetAttacker(Guid id)
+        public PlayingCard? GetCharacterOrLeader(Guid id)
         {
             if (Leader != null && Leader.Id == id)
             {
@@ -146,6 +146,14 @@ namespace OPSProServer.Contracts.Models
             }
 
             return GetCharacter(id);
+        }
+
+        public List<PlayingCard> GetCharactersOrLeader()
+        {
+            var tempList = new List<PlayingCard>();
+            tempList.Add(Leader);
+            tempList.AddRange(GetCharacters());
+            return tempList;
         }
 
         public PlayingCard? KillCharacter(Guid id)
@@ -338,7 +346,7 @@ namespace OPSProServer.Contracts.Models
 
         public PlayingCard? GetCard(Guid id)
         {
-            PlayingCard? card = GetAttacker(id);
+            PlayingCard? card = GetCharacterOrLeader(id);
             if (card == null)
             {
                 if (Stage != null && Stage.Id == id)

@@ -10,6 +10,13 @@ namespace OPSProServer.Hubs
         {
             try
             {
+#if DEBUG
+                var userExists = _userManager.GetUsers().FirstOrDefault(x => x.Username == username);
+                if (userExists != null)
+                {
+                    username = username + " - 2";
+                }
+#endif
                 var user = new User(Context.ConnectionId, username);
                 _logger.LogInformation("Register new user {User}", user);
 

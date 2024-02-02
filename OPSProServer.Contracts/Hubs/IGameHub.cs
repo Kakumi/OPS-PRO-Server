@@ -24,7 +24,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userId"></param>
         /// <param name="rps"></param>
         /// <returns></returns>
-        Task<bool> SetRockPaperScissors(Guid userId, RPSChoice rps);
+        Task<bool> SetRockPaperScissors(RPSChoice rps);
 
         /// <summary>
         /// <para>Tell the server that the game should start.</para>
@@ -34,7 +34,7 @@ namespace OPSProServer.Contracts.Hubs
         /// <param name="userId"></param>
         /// <param name="userToStart"></param>
         /// <returns></returns>
-        Task<bool> LaunchGame(Guid userId, Guid userToStart);
+        Task<bool> LaunchGame(Guid userToStart);
 
         /// <summary>
         /// <para>Tell the server the user want to go to next phase.</para>
@@ -42,7 +42,7 @@ namespace OPSProServer.Contracts.Hubs
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
-        Task<bool> NextPhase(Guid userId);
+        Task<bool> NextPhase();
 
         /// <summary>
         /// <para>Ask the server which cards can the user attack.</para>
@@ -50,14 +50,16 @@ namespace OPSProServer.Contracts.Hubs
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
-        Task<bool> GetAttackableCards(Guid userId, Guid attacker);
+        Task<bool> GetAttackableCards(Guid attacker);
 
-        Task<bool> Attack(Guid userId, Guid attacker, Guid target);
+        Task<bool> Attack(Guid attacker, Guid target);
 
-        Task<bool> GiveDonCard(Guid userId, Guid characterCardId);
+        Task<bool> GiveDonCard(Guid characterCardId);
 
-        Task<bool> ActivateCardEffect(Guid userId, Guid characterCardId);
+        Task<bool> ActivateCardEffect(Guid characterCardId);
 
-        Task<bool> Summon(Guid userId, Guid cardId);
+        Task<bool> Summon(Guid cardId);
+
+        Task<bool> ResolveFlow(FlowActionResponse response);
     }
 }

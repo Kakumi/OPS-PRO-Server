@@ -63,7 +63,7 @@ namespace OPSProServer.Services
 
         public CardInfo? GetCardInfo(string id)
         {
-            return _cards.FirstOrDefault(x => x.Id == id);
+            return GetCardsInfo().FirstOrDefault(x => x.Id == id);
         }
 
         public ICardScript? GetCardScript(string serieNumber)
@@ -164,22 +164,6 @@ namespace OPSProServer.Services
             if (script != null)
             {
                 return script.IsBanish(user, game, playingCard);
-            }
-
-            return false;
-        }
-
-        public bool IsTrigger(PlayingCard playingCard, User user, Game game)
-        {
-            if (playingCard.CardInfo.IsTrigger)
-            {
-                return true;
-            }
-
-            var script = GetCardScript(playingCard);
-            if (script != null)
-            {
-                return script.IsTrigger(user, game, playingCard);
             }
 
             return false;

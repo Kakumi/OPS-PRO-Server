@@ -17,19 +17,19 @@ namespace OPSProServer.Services
             _cardService = cardService;
         }
 
-        public bool CanAttack(PlayingCard? card, User user, Game game)
+        public bool CanAttack(PlayingCard? card, User user, Room room, Game game)
         {
             if (card == null)
             {
                 throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
             }
 
-            if (game.Turn <= 1)
+            if (game.Turn <= 0) //TODO 1
             {
                 throw new ErrorUserActionException(user.Id, "GAME_PLAYER_CANT_ATTACK_FIRST_TURN");
             }
 
-            if (card.Turn <= 1)
+            if (card.Turn <= 0) //TODO 1
             {
                 if (!card.CardInfo.IsRush)
                 {
@@ -55,12 +55,12 @@ namespace OPSProServer.Services
             return true;
         }
 
-        public AttackResult Attack(User user, Game game, Guid attacker, Guid target)
+        public AttackResult Attack(User user, Room room, Game game, Guid attacker, Guid target)
         {
             var myGameInfo = game.GetMyPlayerInformation(user.Id);
             var opponentGameInfo = game.GetOpponentPlayerInformation(user.Id);
-            var attackerCard = myGameInfo.GetAttacker(attacker);
-            var defenderCard = opponentGameInfo.GetAttacker(target);
+            var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
+            var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
             if (attackerCard != null && defenderCard != null)
             {
                 var attackTotalPower = attackerCard.GetTotalPower();
@@ -103,9 +103,9 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
         }
 
-        public RuleResponse GiveDon(User user, Game game, Guid cardId)
+        public Contracts.Models.RuleResponse GiveDon(User user, Room room, Game game, Guid cardId)
         {
-            var response = new RuleResponse();
+            var response = new Contracts.Models.RuleResponse();
 
             var gameInfo = game.GetMyPlayerInformation(user.Id);
             if (gameInfo.DonAvailable == 0)
@@ -113,7 +113,7 @@ namespace OPSProServer.Services
                 throw new ErrorUserActionException(user.Id, "GAME_NOT_ENOUGH_DON", "1");
             }
 
-            var card = gameInfo.GetAttacker(cardId);
+            var card = gameInfo.GetCharacterOrLeader(cardId);
             if (card == null)
             {
                 throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
@@ -130,12 +130,12 @@ namespace OPSProServer.Services
                 cardScript.OnGiveDon(user, game, card);
             }
 
-            response.CodesMessage.Add(new UserGameMessage("GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
+            response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
 
-            return new RuleResponse();
+            return new Contracts.Models.RuleResponse();
         }
 
-        public List<PlayingCard> GetAttackableCards(User user, Game game)
+        public List<PlayingCard> GetAttackableCards(User user, Room room, Game game)
         {
             var opponentGameInfo = game.GetOpponentPlayerInformation(user.Id);
             var cards = new List<PlayingCard>();
@@ -149,19 +149,19 @@ namespace OPSProServer.Services
             return cards;
         }
 
-        public List<PlayingCard> GetCounterCards(User user, Game game)
+        public List<PlayingCard> GetCounterCards(User user, Room room, Game game)
         {
             var gameInfo = game.GetMyPlayerInformation(user.Id);
             return gameInfo.Hand.Where(x => x.GetTotalCounter() != 0).ToList();
         }
 
-        public List<PlayingCard> GetBlockerCards(User user, Game game)
+        public List<PlayingCard> GetBlockerCards(User user, Room room, Game game)
         {
             var gameInfo = game.GetMyPlayerInformation(user.Id);
-            return gameInfo.Hand.Where(x => _cardService.IsBlocker(x, user, game)).ToList();
+            return gameInfo.GetCharacters().Where(x => _cardService.IsBlocker(x, user, game)).ToList();
         }
 
-        public bool CanSummon(User user, Game game, Guid cardId)
+        public bool CanSummon(User user, Room room, Game game, Guid cardId)
         {
             var gameInfo = game.GetMyPlayerInformation(user.Id);
             var handCard = gameInfo.Hand.FirstOrDefault(x => x.Id == cardId);
@@ -188,12 +188,12 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
         }
 
-        public RuleResponse Summon(User user, Game game, Guid cardId, Guid replaceId = default)
+        public Contracts.Models.RuleResponse Summon(User user, Room room, Game game, Guid cardId, Guid replaceId = default)
         {
-            var response = new RuleResponse();
+            var response = new Contracts.Models.RuleResponse();
 
             //Can summon (enough spaces) or replace character id is set
-            if (CanSummon(user, game, cardId) || replaceId != default)
+            if (CanSummon(user, room, game, cardId) || replaceId != default)
             {
                 var gameInfo = game.GetMyPlayerInformation(user.Id);
                 var handCard = gameInfo.Hand.First(x => x.Id == cardId);
@@ -203,7 +203,7 @@ namespace OPSProServer.Services
                     var trashCard = gameInfo.SetStage(handCard);
                     if (trashCard != null)
                     {
-                        response.CodesMessage.Add(new UserGameMessage("GAME_CARD_TRASH", user.Username, trashCard.CardInfo.Name));
+                        response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_CARD_TRASH", user.Username, trashCard.CardInfo.Name));
                         var script = _cardService.GetCardScript(trashCard);
                         if (script != null)
                         {
@@ -225,7 +225,7 @@ namespace OPSProServer.Services
                         }
 
                         gameInfo.ReplaceCharacter(handCard, replaceId);
-                        response.CodesMessage.Add(new UserGameMessage("GAME_CARD_TRASH", user.Username, replacedCard.CardInfo.Name));
+                        response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_CARD_TRASH", user.Username, replacedCard.CardInfo.Name));
                         var script = _cardService.GetCardScript(replacedCard);
                         if (script != null)
                         {
@@ -236,7 +236,7 @@ namespace OPSProServer.Services
 
                 gameInfo.UseDonCard(handCard.GetTotalCost());
                 gameInfo.RemoveFromHand(cardId);
-                response.CodesMessage.Add(new UserGameMessage("GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
+                response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
 
                 return response;
             }
@@ -244,25 +244,25 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_CANNOT_BE_SUMMONED");
         }
 
-        public RuleResponse UseCounters(User user, Game game, Guid fromCardId, List<Guid> cardsId)
+        public Contracts.Models.RuleResponse UseCounters(User user, Room room, Game game, Guid fromCardId, List<Guid> cardsId)
         {
-            var response = new RuleResponse();
+            var response = new Contracts.Models.RuleResponse();
             var gameInfo = game.GetMyPlayerInformation(user.Id);
 
-            var card = gameInfo.GetAttacker(fromCardId);
+            var card = gameInfo.GetCharacterOrLeader(fromCardId);
             if (card == null)
             {
                 throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
             }
 
-            var counters = GetCounterCards(user, game);
+            var counters = GetCounterCards(user, room, game);
             var cardsToUse = counters.Where(x => cardsId.Contains(x.Id)).ToList();
             foreach(var cardToUse in cardsToUse)
             {
                 var removed = gameInfo.RemoveFromHand(cardToUse.Id);
                 if (removed != null)
                 {
-                    response.CodesMessage.Add(new UserGameMessage("GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
+                    response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
                     card.PowerModifier.Add(new ValueModifier(ModifierDuration.Battle, cardToUse.GetTotalCounter()));
                 }
             }

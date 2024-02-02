@@ -6,6 +6,8 @@ using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Exceptions;
 using OPSProServer.Attributes;
 using OPSProServer.Services;
+using OPSProServer.Models;
+using System.ComponentModel;
 
 namespace OPSProServer.Hubs
 {
@@ -15,10 +17,10 @@ namespace OPSProServer.Hubs
         protected readonly ICardService _cardService;
         protected readonly IRoomManager _roomManager;
         protected readonly IUserManager _userManager;
-        protected readonly IResolverManager _resolverManager;
+        protected readonly IFlowManager _resolverManager;
         protected readonly IGameRuleService _gameRuleService;
 
-        public GameHub(ILogger<GameHub> logger, ICardService cardService, IRoomManager roomManager, IUserManager userManager, IResolverManager resolverManager, IGameRuleService gameRuleService)
+        public GameHub(ILogger<GameHub> logger, ICardService cardService, IRoomManager roomManager, IUserManager userManager, IFlowManager resolverManager, IGameRuleService gameRuleService)
         {
             _logger = logger;
             _cardService = cardService;
@@ -28,6 +30,7 @@ namespace OPSProServer.Hubs
             _gameRuleService = gameRuleService;
         }
 
+        [Connected(true)]
         public async Task<bool> LaunchRockPaperScissors(Guid roomId)
         {
             try
@@ -50,104 +53,86 @@ namespace OPSProServer.Hubs
             }
         }
 
-        public async Task<bool> SetRockPaperScissors(Guid userId, RPSChoice rps)
+        [Connected(true)]
+        public async Task<bool> SetRockPaperScissors(RPSChoice rps)
         {
-            try
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+
+            if (room!.Opponent != null)
             {
-                var user = _userManager.GetUser(userId);
-                if (user != null)
+                if (user!.Id == room.Creator.Id)
                 {
-                    var room = _roomManager.GetRoom(user);
-                    if (room != null && room.Opponent != null)
+                    room.Creator.RPSChoice = rps;
+                }
+                else if (user.Id == room.Opponent.Id)
+                {
+                    room.Opponent.RPSChoice = rps;
+                }
+
+                if (room.Creator.RPSChoice != RPSChoice.None && room.Opponent.RPSChoice != RPSChoice.None)
+                {
+                    var result = room.GetRPSWinner();
+
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.RPSExecuted), result!);
+
+                    if (result.Winner != null)
                     {
-                        if (userId == room.Creator.Id)
+                        var winnerUser = _userManager.GetUser(result.Winner ?? Guid.Empty);
+                        if (winnerUser == null)
                         {
-                            room.Creator.RPSChoice = rps;
-                        }
-                        else if (userId == room.Opponent.Id)
-                        {
-                            room.Opponent.RPSChoice = rps;
+                            winnerUser = room.Creator;
                         }
 
-                        if (room.Creator.RPSChoice != RPSChoice.None && room.Opponent.RPSChoice != RPSChoice.None)
-                        {
-                            var result = room.GetRPSWinner();
-
-                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.RPSExecuted), result!);
-
-                            if (result.Winner != null)
-                            {
-                                var winnerUser = _userManager.GetUser(result.Winner ?? Guid.Empty);
-                                if (winnerUser == null)
-                                {
-                                    winnerUser = room.Creator;
-                                }
-
-                                await Clients.Client(winnerUser.ConnectionId).SendAsync(nameof(IGameHubEvent.ChooseFirstPlayerToPlay));
-                            }
-                            else
-                            {
-                                //If winner is null it's tie, reset values
-                                room.Creator.RPSChoice = RPSChoice.None;
-                                room.Opponent.RPSChoice = RPSChoice.None;
+                        await Clients.Client(winnerUser.ConnectionId).SendAsync(nameof(IGameHubEvent.ChooseFirstPlayerToPlay));
+                    }
+                    else
+                    {
+                        //If winner is null it's tie, reset values
+                        room.Creator.RPSChoice = RPSChoice.None;
+                        room.Opponent.RPSChoice = RPSChoice.None;
 
 #if DEBUG
-                                room.Opponent.RPSChoice = RPSChoice.Paper;
+                        room.Opponent.RPSChoice = RPSChoice.Paper;
 #endif
-                            }
-                        }
-
-                        return true;
                     }
                 }
 
-                return false;
+                return true;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+
+            return false;
         }
 
-        public async Task<bool> LaunchGame(Guid userId, Guid userToStart)
+        [Connected(true)]
+        public async Task<bool> LaunchGame(Guid userToStart)
         {
-            try
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+
+            if (room!.Opponent != null)
             {
-                var user = _userManager.GetUser(userId);
-                if (user != null)
+                var userStart = _userManager.GetUser(userToStart)!;
+                var game = room.StartGame(userToStart);
+                game.PhaseChanged += Game_PhaseChanged;
+
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), game);
+                await Clients.Client(room.Opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", user.Username));
+                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", room.Opponent.Username));
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_USER_START", userStart.Username));
+
+                if (game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
                 {
-                    var room = _roomManager.GetRoom(user);
-                    if (room != null && room.Opponent != null)
-                    {
-                        var userStart = _userManager.GetUser(userToStart)!;
-                        var game = room.StartGame(userToStart);
-                        game.PhaseChanged += Game_PhaseChanged;
-
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), game);
-                        await Clients.Client(room.Opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", user.Username));
-                        await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", room.Opponent.Username));
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_USER_START", userStart.Username));
-
-                        if (game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
-                        {
-                            await game.UpdatePhase();
-                        }
-
-                        game.PhaseChanged -= Game_PhaseChanged;
-
-                        return true;
-                    }
+                    await game.UpdatePhase();
                 }
 
-                return false;
+                game.PhaseChanged -= Game_PhaseChanged;
+
+                return true;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-                return false;
-            }
+
+            return false;
         }
 
         //We need to subscribe -> execute -> unsubscribe because:
@@ -186,11 +171,12 @@ namespace OPSProServer.Hubs
             }
         }
 
-        [InGame]
-        public async Task<bool> NextPhase(Guid userId)
+        [Connected(true, true, true)]
+        public async Task<bool> NextPhase()
         {
-            User user = _userManager.GetUser(userId)!;
-            Room room = _roomManager.GetRoom(user)!;
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+
             room!.Game!.PhaseChanged += Game_PhaseChanged;
             await room.Game.UpdatePhase();
             room.Game.PhaseChanged -= Game_PhaseChanged;
@@ -198,19 +184,17 @@ namespace OPSProServer.Hubs
             return true;
         }
 
-        [InGame]
-        public async Task<bool> GetAttackableCards(Guid userId, Guid attacker)
+        [Connected(true, true, true)]
+        public async Task<bool> GetAttackableCards(Guid attacker)
         {
-            User user = _userManager.GetUser(userId)!;
-            Room room = _roomManager.GetRoom(user)!;
-            var myGameInfo = room.Game!.GetMyPlayerInformation(userId);
-            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userId);
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+            var myGameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
+            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(user.Id);
 
-            await CheckCounters(userId, myGameInfo.Leader.Id, opponentGameInfo.Leader.Id, null);
-
-            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room.Game))
+            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room, room.Game))
             {
-                var cards = _gameRuleService.GetAttackableCards(user, room.Game);
+                var cards = _gameRuleService.GetAttackableCards(user, room, room.Game);
                 var result = new AttackableResult(attacker, cards.Ids());
                 await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.AttackableCards), result);
             }
@@ -218,77 +202,185 @@ namespace OPSProServer.Hubs
             return true;
         }
 
-        [InGame]
-        public async Task<bool> Attack(Guid userId, Guid attacker, Guid target)
+        [Connected(true, true, true)]
+        public async Task<bool> Attack(Guid attacker, Guid target)
         {
-            User user = _userManager.GetUser(userId)!;
-            Room room = _roomManager.GetRoom(user)!;
-            var myGameInfo = room.Game!.GetMyPlayerInformation(userId);
-            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userId);
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+            var myGameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
+            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(user.Id);
 
-            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room.Game))
+            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room, room.Game))
             {
-                var attackerCard = myGameInfo.GetAttacker(attacker);
-                var defenderCard = opponentGameInfo.GetAttacker(target);
+                var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
+                var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
                 if (attackerCard != null && defenderCard != null)
                 {
-                    var sent = await CheckBlockers(userId, attacker, target);
-                    if (sent)
+                    var blockerFlow = PrepareAttackCheckOpponentBlockers(user.Id, attacker, target);
+                    if (blockerFlow != null)
                     {
-                        return true;
+                        return await ManageFlowAction(user, room, blockerFlow);
                     }
 
-                    sent = await CheckCounters(userId, attacker, target, null);
-                    if (sent)
+                    var counterFlow = PrepareAttackCheckOpponentCounters(user.Id, attacker, target);
+                    if (counterFlow != null)
                     {
-                        return true;
+                        return await ManageFlowAction(user, room, counterFlow);
                     }
 
-                    return await ResolveAttack(userId, attacker, target);
+                    return await ResolveAttack(user.Id, attacker, target);
                 }
             }
 
-            throw new ErrorUserActionException(userId, "GAME_CARD_NOT_FOUND");
+            throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
         }
 
-        [InGame]
-        public async Task<bool> GiveDonCard(Guid userId, Guid characterCardId)
+        [Connected(true, true, true)]
+        public async Task<bool> GiveDonCard(Guid characterCardId)
         {
-            User user = _userManager.GetUser(userId)!;
-            Room room = _roomManager.GetRoom(user)!;
-            var gameInfo = room!.Game!.GetMyPlayerInformation(userId);
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+            var gameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
 
-            var response = _gameRuleService.GiveDon(user, room.Game, characterCardId);
+            var response = _gameRuleService.GiveDon(user, room, room.Game, characterCardId);
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
 
-            foreach (var message in response.CodesMessage)
+            foreach (var message in response.FlowResponses)
             {
-                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), message);
+                await SendFlowMessage(message);
             }
 
             return true;
         }
 
-        [InGame]
-        public async Task<bool> Summon(Guid userId, Guid cardId)
+        [Connected(true, true, true)]
+        public async Task<bool> Summon(Guid cardId)
         {
-            User user = _userManager.GetUser(userId)!;
-            Room room = _roomManager.GetRoom(user)!;
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
             var gameInfo = room!.Game!.GetCurrentPlayerGameInformation();
-            var response = _gameRuleService.Summon(user, room.Game, cardId);
+            var response = _gameRuleService.Summon(user!, room, room.Game, cardId);
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
-            foreach(var message in response.CodesMessage)
+            foreach(var message in response.FlowResponses)
             {
-                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), message);
+                await SendFlowMessage(message);
             }
 
             return true;
         }
 
-        [InGame]
-        public Task<bool> ActivateCardEffect(Guid userId, Guid characterCardId)
+        [Connected(true, true, true)]
+        public Task<bool> ActivateCardEffect(Guid characterCardId)
         {
             throw new NotImplementedException();
+        }
+
+        private async Task<bool> ManageFlowAction(User user, Room room, FlowAction action)
+        {
+            var opponent = room.GetOpponent(action.Request!.UserTarget);
+            var opponentGameInfo = room.Game.GetOpponentPlayerInformation(action.Request!.UserTarget.Id);
+            opponentGameInfo.Waiting = true;
+
+            _resolverManager.AddFlow(action);
+
+            await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+            await Clients.Client(action.Request!.UserTarget.ConnectionId).SendAsync(nameof(IGameHubEvent.FlowActionRequest), action.Request!);
+
+            return true;
+        }
+
+        [Connected(true, true)]
+        public async Task<bool> ResolveFlow(FlowActionResponse response)
+        {
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+            var flow = _resolverManager.GetFlow(response.FlowId);
+
+            if (flow != null && (flow.FromUser.Id == user!.Id || flow.ToUser.Id == user!.Id))
+            {
+                var opponent = room!.GetOpponent(flow.Request!.UserTarget);
+                var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(flow.Request!.UserTarget.Id);
+                opponentGameInfo.Waiting = false;
+
+                await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+
+                var messages = flow.Action(new FlowArgs(user!, room!, room!.Game!, flow, response));
+                foreach (var message in messages)
+                {
+                    await SendFlowMessage(message);
+                }
+
+                var nextFlow = _resolverManager.ResolveFlow(flow.Id);
+                if (nextFlow != null)
+                {
+                    await ManageFlowAction(user!, room!, nextFlow);
+                }
+
+                await Clients.Group(room!.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task SendFlowMessage(FlowResponseMessage? message)
+        {
+            if (message != null)
+            {
+                if (message.User != null)
+                {
+                    await Clients.Client(message.User!.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
+                }
+                else if (message.Room != null)
+                {
+                    await Clients.Group(message.Room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
+                }
+            }
+        }
+
+        [Connected(true, true)]
+        public async Task<bool> Test()
+        {
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+
+            _ = Task.Run(async () => await TestRunner());
+
+            var flowAction1 = new FlowAction(user, user, Test1);
+            var request1 = new FlowActionRequest(flowAction1.Id, user, "TEST1_CODE", false);
+            flowAction1.Request = request1;
+
+            var flowAction2 = new FlowAction(user, user, Test2);
+            var request2 = new FlowActionRequest(flowAction2.Id, user, "TEST2_CODE", false);
+            flowAction2.Request = request2;
+
+            flowAction1.AddLast(flowAction2);
+
+            return await ManageFlowAction(user, room!, flowAction1);
+        }
+
+        public List<FlowResponseMessage> Test1(FlowArgs args)
+        {
+            return new List<FlowResponseMessage>()
+            {
+                new FlowResponseMessage(args.User, new UserGameMessage("HELLO_1"))
+            };
+        }
+
+        public List<FlowResponseMessage> Test2(FlowArgs args)
+        {
+            return new List<FlowResponseMessage>()
+            {
+                new FlowResponseMessage(args.User, new UserGameMessage("HELLO_2"))
+            };
+        }
+
+        public async Task TestRunner()
+        {
+            await Task.Delay(500);
+            var user = Context.Items["user"] as User;
+            await Clients.Client(user!.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("RUNNER"));
         }
     }
 }

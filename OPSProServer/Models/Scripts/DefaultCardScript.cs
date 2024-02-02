@@ -1,4 +1,6 @@
-﻿using OPSProServer.Contracts.Models;
+﻿using Microsoft.AspNetCore.SignalR;
+using OPSProServer.Contracts.Models;
+using OPSProServer.Hubs;
 
 namespace OPSProServer.Models.Scripts
 {
@@ -24,13 +26,13 @@ namespace OPSProServer.Models.Scripts
             return playingCard.CardInfo.IsRush;
         }
 
-        public virtual bool IsTrigger(User user, Game game, PlayingCard playingCard)
-        {
-            return playingCard.CardInfo.IsTrigger;
-        }
-
         public virtual void OnGiveDon(User user, Game game, PlayingCard playingCard) { }
 
         public virtual void OnTrash(User user, Game game, PlayingCard playingCard) { }
+
+        public virtual Contracts.Models.RuleResponse OnTrigger(User user, Game game, PlayingCard playingCard)
+        {
+            return new Contracts.Models.RuleResponse();
+        }
     }
 }
