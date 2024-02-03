@@ -103,7 +103,7 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
         }
 
-        public Contracts.Models.RuleResponse GiveDon(User user, Room room, Game game, Guid cardId)
+        public RuleResponse GiveDon(User user, Room room, Game game, Guid cardId)
         {
             var response = new Contracts.Models.RuleResponse();
 
@@ -132,7 +132,7 @@ namespace OPSProServer.Services
 
             response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
 
-            return new Contracts.Models.RuleResponse();
+            return response;
         }
 
         public List<PlayingCard> GetAttackableCards(User user, Room room, Game game)
@@ -188,9 +188,9 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
         }
 
-        public Contracts.Models.RuleResponse Summon(User user, Room room, Game game, Guid cardId, Guid replaceId = default)
+        public RuleResponse Summon(User user, Room room, Game game, Guid cardId, Guid replaceId = default)
         {
-            var response = new Contracts.Models.RuleResponse();
+            var response = new RuleResponse();
 
             //Can summon (enough spaces) or replace character id is set
             if (CanSummon(user, room, game, cardId) || replaceId != default)
@@ -244,9 +244,9 @@ namespace OPSProServer.Services
             throw new ErrorUserActionException(user.Id, "GAME_CARD_CANNOT_BE_SUMMONED");
         }
 
-        public Contracts.Models.RuleResponse UseCounters(User user, Room room, Game game, Guid fromCardId, List<Guid> cardsId)
+        public RuleResponse UseCounters(User user, Room room, Game game, Guid fromCardId, List<Guid> cardsId)
         {
-            var response = new Contracts.Models.RuleResponse();
+            var response = new RuleResponse();
             var gameInfo = game.GetMyPlayerInformation(user.Id);
 
             var card = gameInfo.GetCharacterOrLeader(fromCardId);

@@ -30,9 +30,9 @@ namespace OPSProServer.Models.Scripts
 
         public virtual void OnTrash(User user, Game game, PlayingCard playingCard) { }
 
-        public virtual Contracts.Models.RuleResponse OnTrigger(User user, Game game, PlayingCard playingCard)
+        public virtual RuleResponse OnTrigger(User user, Game game, PlayingCard playingCard)
         {
-            return new Contracts.Models.RuleResponse();
+            return new RuleResponse();
         }
     }
 }

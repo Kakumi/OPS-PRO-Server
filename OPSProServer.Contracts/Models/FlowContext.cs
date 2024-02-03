@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace OPSProServer.Contracts.Models
 {
-    public enum ActionResolverType
+    public enum FlowContext
     {
-        Blocker,
-        Counter
+        None,
+        Attack,
+        ResolveAttack
     }
 }

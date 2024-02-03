@@ -14,6 +14,7 @@ namespace OPSProServer.Contracts.Models
         public ActionNotifier Action { get; }
         public FlowActionRequest? Request { get; set; }
         public FlowAction? NextAction { get; private set; }
+        public FlowContext FinalContext { get; set; }
 
         public delegate List<FlowResponseMessage> ActionNotifier(FlowArgs args);
 
@@ -25,6 +26,7 @@ namespace OPSProServer.Contracts.Models
             Action = actionNotifier;
             Request = null;
             NextAction = null;
+            FinalContext = FlowContext.None;
         }
 
         public void AddFirst(FlowAction action)

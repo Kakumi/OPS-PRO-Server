@@ -5,14 +5,8 @@ namespace OPSProServer.Managers
 {
     public interface IFlowManager
     {
-        ActionResolver? GetResolver(Guid? id);
-        void Resolve(Guid id);
-        void AddResolver(ActionResolver resolver);
-        UserResolver? GetUserResolver(Guid? id);
-        void ResolveUser(Guid id);
-        void AddUserResolver(UserResolver resolver);
-        FlowAction? GetFlow(Guid? id);
-        FlowAction? ResolveFlow(Guid id);
-        void AddFlow(FlowAction action);
+        FlowAction? Get(Guid? id);
+        FlowAction? Resolve(Guid id);
+        void Add(FlowAction action);
     }
 }

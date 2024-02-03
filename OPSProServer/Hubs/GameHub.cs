@@ -195,11 +195,26 @@ namespace OPSProServer.Hubs
             if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room, room.Game))
             {
                 var cards = _gameRuleService.GetAttackableCards(user, room, room.Game);
-                var result = new AttackableResult(attacker, cards.Ids());
-                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.AttackableCards), result);
+
+                var flowAction = new FlowAction(user, user, ResolveAttackable);
+                var flowRequest = new FlowActionRequest(flowAction.Id, user, "GAME_CHOOSE_ATTACK_OPPONENT", cards.Ids().ToList(), 1, 1, true);
+                flowAction.Request = flowRequest;
+                flowAction.FromCardId = attacker;
+                flowAction.ToCardId = null;
+                flowAction.FinalContext = FlowContext.Attack;
+
+                return await ManageFlowAction(user, room, flowAction);
+
+                //var result = new AttackableResult(attacker, cards.Ids());
+                //await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.AttackableCards), result);
             }
 
             return true;
+        }
+
+        private List<FlowResponseMessage> ResolveAttackable(FlowArgs args)
+        {
+            return new List<FlowResponseMessage>();
         }
 
         [Connected(true, true, true)]
@@ -278,12 +293,14 @@ namespace OPSProServer.Hubs
         private async Task<bool> ManageFlowAction(User user, Room room, FlowAction action)
         {
             var opponent = room.GetOpponent(action.Request!.UserTarget);
-            var opponentGameInfo = room.Game.GetOpponentPlayerInformation(action.Request!.UserTarget.Id);
-            opponentGameInfo.Waiting = true;
+            if (room.Game!.PlayerTurn == opponent!.Id)
+            {
+                var opponentGameInfo = room.Game.GetOpponentPlayerInformation(action.Request!.UserTarget.Id);
+                opponentGameInfo.Waiting = true;
+                await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+            }
 
-            _resolverManager.AddFlow(action);
-
-            await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+            _resolverManager.Add(action);
             await Clients.Client(action.Request!.UserTarget.ConnectionId).SendAsync(nameof(IGameHubEvent.FlowActionRequest), action.Request!);
 
             return true;
@@ -294,7 +311,7 @@ namespace OPSProServer.Hubs
         {
             var user = Context.Items["user"] as User;
             var room = Context.Items["room"] as Room;
-            var flow = _resolverManager.GetFlow(response.FlowId);
+            var flow = _resolverManager.Get(response.FlowId);
 
             if (flow != null && (flow.FromUser.Id == user!.Id || flow.ToUser.Id == user!.Id))
             {
@@ -310,7 +327,30 @@ namespace OPSProServer.Hubs
                     await SendFlowMessage(message);
                 }
 
-                var nextFlow = _resolverManager.ResolveFlow(flow.Id);
+                var nextFlow = _resolverManager.Resolve(flow.Id);
+                if (nextFlow == null || nextFlow.FinalContext != flow.FinalContext)
+                {
+                    switch (flow.FinalContext)
+                    {
+                        case FlowContext.None:
+                            break;
+                        case FlowContext.Attack:
+                            if (response.CardsId.Count > 0 && flow.FromCardId != null)
+                            {
+                                await Attack(flow.FromCardId!.Value, response.CardsId.First());
+                            }
+
+                            break;
+                        case FlowContext.ResolveAttack:
+                            if (flow.FromCardId != null && flow.ToCardId != null)
+                            {
+                                await ResolveAttack(flow.FromUser.Id, flow.FromCardId!.Value,  flow.ToCardId!.Value);
+                            }
+
+                            break;
+                    }
+                }
+
                 if (nextFlow != null)
                 {
                     await ManageFlowAction(user!, room!, nextFlow);
@@ -337,50 +377,6 @@ namespace OPSProServer.Hubs
                     await Clients.Group(message.Room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
                 }
             }
-        }
-
-        [Connected(true, true)]
-        public async Task<bool> Test()
-        {
-            var user = Context.Items["user"] as User;
-            var room = Context.Items["room"] as Room;
-
-            _ = Task.Run(async () => await TestRunner());
-
-            var flowAction1 = new FlowAction(user, user, Test1);
-            var request1 = new FlowActionRequest(flowAction1.Id, user, "TEST1_CODE", false);
-            flowAction1.Request = request1;
-
-            var flowAction2 = new FlowAction(user, user, Test2);
-            var request2 = new FlowActionRequest(flowAction2.Id, user, "TEST2_CODE", false);
-            flowAction2.Request = request2;
-
-            flowAction1.AddLast(flowAction2);
-
-            return await ManageFlowAction(user, room!, flowAction1);
-        }
-
-        public List<FlowResponseMessage> Test1(FlowArgs args)
-        {
-            return new List<FlowResponseMessage>()
-            {
-                new FlowResponseMessage(args.User, new UserGameMessage("HELLO_1"))
-            };
-        }
-
-        public List<FlowResponseMessage> Test2(FlowArgs args)
-        {
-            return new List<FlowResponseMessage>()
-            {
-                new FlowResponseMessage(args.User, new UserGameMessage("HELLO_2"))
-            };
-        }
-
-        public async Task TestRunner()
-        {
-            await Task.Delay(500);
-            var user = Context.Items["user"] as User;
-            await Clients.Client(user!.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("RUNNER"));
         }
     }
 }
