@@ -6,7 +6,17 @@
 
         public bool IsActionAllowed(CardSource source, CardAction action)
         {
-            return true;
+            return action == CardAction.See ||
+                source == CardSource.Leader ||
+                source == CardSource.Character ||
+                source == CardSource.Hand ||
+                source == CardSource.Board ||
+                source == CardSource.CostDeck ||
+                source == CardSource.Deck ||
+                source == CardSource.DonDeck ||
+                source == CardSource.Life ||
+                source == CardSource.Stage ||
+                source == CardSource.Trash;
         }
 
 

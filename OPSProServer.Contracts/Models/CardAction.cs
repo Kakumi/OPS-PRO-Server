@@ -7,6 +7,7 @@
         Discard,
         Attack,
         Summon,
-        GiveDon
+        GiveDon,
+        Activate
     }
 }
