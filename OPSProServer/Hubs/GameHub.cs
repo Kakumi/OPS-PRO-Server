@@ -212,9 +212,9 @@ namespace OPSProServer.Hubs
             return true;
         }
 
-        private List<FlowResponseMessage> ResolveAttackable(FlowArgs args)
+        private RuleResponse ResolveAttackable(FlowArgs args)
         {
-            return new List<FlowResponseMessage>();
+            return new RuleResponse();
         }
 
         [Connected(true, true, true)]
@@ -262,7 +262,7 @@ namespace OPSProServer.Hubs
 
             foreach (var message in response.FlowResponses)
             {
-                await SendFlowMessage(message);
+                await SendFlowMessage(room, message);
             }
 
             return true;
@@ -278,7 +278,7 @@ namespace OPSProServer.Hubs
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
             foreach(var message in response.FlowResponses)
             {
-                await SendFlowMessage(message);
+                await SendFlowMessage(room, message);
             }
 
             return true;
@@ -321,10 +321,21 @@ namespace OPSProServer.Hubs
 
                 await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
 
-                var messages = flow.Action(new FlowArgs(user!, room!, room!.Game!, flow, response));
-                foreach (var message in messages)
+                var ruleResponse = flow.Action(new FlowArgs(user!, room!, room!.Game!, flow, response));
+                if (ruleResponse.FlowAction != null)
                 {
-                    await SendFlowMessage(message);
+                    if (ruleResponse.PriorityFlowAction)
+                    {
+                        flow.AddFirst(ruleResponse.FlowAction);
+                    } else
+                    {
+                        flow.AddLast(ruleResponse.FlowAction);
+                    }
+                }
+
+                foreach (var message in ruleResponse.FlowResponses)
+                {
+                    await SendFlowMessage(room, message);
                 }
 
                 var nextFlow = _resolverManager.Resolve(flow.Id);
@@ -364,7 +375,7 @@ namespace OPSProServer.Hubs
             return false;
         }
 
-        private async Task SendFlowMessage(FlowResponseMessage? message)
+        private async Task SendFlowMessage(Room room, FlowResponseMessage? message)
         {
             if (message != null)
             {
@@ -372,9 +383,9 @@ namespace OPSProServer.Hubs
                 {
                     await Clients.Client(message.User!.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
                 }
-                else if (message.Room != null)
+                else
                 {
-                    await Clients.Group(message.Room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
                 }
             }
         }

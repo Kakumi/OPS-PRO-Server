@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OPSProServer.Contracts.Models.Scripts;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -19,9 +20,10 @@ namespace OPSProServer.Contracts.Models
         public bool VisibleForOpponent { get; set; }
         public int Turn { get; private set; }
         public int DonCard { get; set; }
+        public CardScript Script { get; set; }
 
         [JsonConstructor]
-        public PlayingCard(Guid id, CardInfo cardInfo, List<ValueModifier> costModifier, List<ValueModifier> counterModifier, List<ValueModifier> powerModifier, List<TagModifier> tags, bool rested, bool flipped, bool destructable, bool visibleForOpponent, int turn, int donCard)
+        public PlayingCard(Guid id, CardInfo cardInfo, List<ValueModifier> costModifier, List<ValueModifier> counterModifier, List<ValueModifier> powerModifier, List<TagModifier> tags, bool rested, bool flipped, bool destructable, bool visibleForOpponent, int turn, int donCard, CardScript script)
         {
             Id = id;
             CardInfo = cardInfo;
@@ -35,6 +37,7 @@ namespace OPSProServer.Contracts.Models
             VisibleForOpponent = visibleForOpponent;
             Turn = turn;
             DonCard = donCard;
+            Script = script;
         }
 
         public PlayingCard(CardInfo cardInfo)
@@ -51,6 +54,7 @@ namespace OPSProServer.Contracts.Models
             VisibleForOpponent = false;
             Turn = 1;
             DonCard = 0;
+            Script = (CardScript) CardScriptService.Instance.GetScriptForCard(this);
         }
 
         public void ToggleRested()
@@ -134,6 +138,16 @@ namespace OPSProServer.Contracts.Models
         public bool HasOncePerTurn()
         {
             return Tags.Any(x => x.Value == "once_per_turn");
+        }
+
+        public bool IsBlocker(User user, Game game)
+        {
+            return CardInfo.IsBlocker || Script.IsBlocker(user, game, this);
+        }
+
+        public bool IsRush(User user, Game game)
+        {
+            return CardInfo.IsBlocker || Script.IsRush(user, game, this);
         }
     }
 }

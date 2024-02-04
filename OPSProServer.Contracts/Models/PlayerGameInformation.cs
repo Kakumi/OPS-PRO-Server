@@ -389,5 +389,17 @@ namespace OPSProServer.Contracts.Models
 
             return null;
         }
+
+        internal List<PlayingCard> GetBoard()
+        {
+            var board = new List<PlayingCard>();
+            board.AddRange(GetCharactersOrLeader());
+            if (Stage != null)
+            {
+                board.Add(Stage);
+            }
+
+            return board;
+        }
     }
 }

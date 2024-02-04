@@ -2,6 +2,7 @@
 using OPSProServer.Contracts.Events;
 using OPSProServer.Contracts.Exceptions;
 using OPSProServer.Contracts.Models;
+using OPSProServer.Contracts.Models.Scripts;
 using OPSProServer.Hubs;
 using OPSProServer.Managers;
 using OPSProServer.Models;
@@ -33,13 +34,13 @@ namespace OPSProServer.Services
             {
                 if (!card.CardInfo.IsRush)
                 {
-                    var script = _cardService.GetCardScript(card);
+                    var script = CardScriptService.Instance.GetScriptForCard(card);
                     if (script == null)
                     {
                         throw new ErrorUserActionException(user.Id, "GAME_PLAYER_CHARACTER_CANT_ATTACK_FIRST_TURN");
 
                     }
-                    else if (script != null && !script.IsRusher(user, game, card))
+                    else if (script != null && !script.IsRush(user, game, card))
                     {
                         throw new ErrorUserActionException(user.Id, "GAME_PLAYER_CHARACTER_CANT_ATTACK_FIRST_TURN");
 
@@ -124,13 +125,13 @@ namespace OPSProServer.Services
                 card.DonCard++;
             }
 
-            var cardScript = _cardService.GetCardScript(card);
+            var cardScript = CardScriptService.Instance.GetScriptForCard(card);
             if (cardScript != null)
             {
                 cardScript.OnGiveDon(user, game, card);
             }
 
-            response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
+            response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
 
             return response;
         }
@@ -158,7 +159,7 @@ namespace OPSProServer.Services
         public List<PlayingCard> GetBlockerCards(User user, Room room, Game game)
         {
             var gameInfo = game.GetMyPlayerInformation(user.Id);
-            return gameInfo.GetCharacters().Where(x => _cardService.IsBlocker(x, user, game)).ToList();
+            return gameInfo.GetCharacters().Where(x => x.IsBlocker(user, game)).ToList();
         }
 
         public bool CanSummon(User user, Room room, Game game, Guid cardId)
@@ -203,8 +204,8 @@ namespace OPSProServer.Services
                     var trashCard = gameInfo.SetStage(handCard);
                     if (trashCard != null)
                     {
-                        response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_CARD_TRASH", user.Username, trashCard.CardInfo.Name));
-                        var script = _cardService.GetCardScript(trashCard);
+                        response.FlowResponses.Add(new FlowResponseMessage("GAME_CARD_TRASH", user.Username, trashCard.CardInfo.Name));
+                        var script = CardScriptService.Instance.GetScriptForCard(trashCard);
                         if (script != null)
                         {
                             script.OnTrash(user, game, trashCard);
@@ -225,8 +226,8 @@ namespace OPSProServer.Services
                         }
 
                         gameInfo.ReplaceCharacter(handCard, replaceId);
-                        response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_CARD_TRASH", user.Username, replacedCard.CardInfo.Name));
-                        var script = _cardService.GetCardScript(replacedCard);
+                        response.FlowResponses.Add(new FlowResponseMessage("GAME_CARD_TRASH", user.Username, replacedCard.CardInfo.Name));
+                        var script = CardScriptService.Instance.GetScriptForCard(replacedCard);
                         if (script != null)
                         {
                             script.OnTrash(user, game, replacedCard);
@@ -236,7 +237,7 @@ namespace OPSProServer.Services
 
                 gameInfo.UseDonCard(handCard.GetTotalCost());
                 gameInfo.RemoveFromHand(cardId);
-                response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
+                response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
 
                 return response;
             }
@@ -262,7 +263,7 @@ namespace OPSProServer.Services
                 var removed = gameInfo.RemoveFromHand(cardToUse.Id);
                 if (removed != null)
                 {
-                    response.FlowResponses.Add(new FlowResponseMessage(room, "GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
                     card.PowerModifier.Add(new ValueModifier(ModifierDuration.Battle, cardToUse.GetTotalCounter()));
                 }
             }

@@ -16,7 +16,7 @@ namespace OPSProServer.Contracts.Models
         public FlowAction? NextAction { get; private set; }
         public FlowContext FinalContext { get; set; }
 
-        public delegate List<FlowResponseMessage> ActionNotifier(FlowArgs args);
+        public delegate RuleResponse ActionNotifier(FlowArgs args);
 
         public FlowAction(User from, User to, ActionNotifier actionNotifier)
         {

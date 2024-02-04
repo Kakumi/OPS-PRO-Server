@@ -1,5 +1,8 @@
 ﻿using OPSProServer.Contracts.Exceptions;
+using OPSProServer.Contracts.Models.Scripts;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -113,13 +116,170 @@ namespace OPSProServer.Contracts.Models
             Turn++;
         }
 
-        //Mainly for client since this method is redefined inside GameRuleEngine with more details
-        public bool CanAttack(Guid userId, Guid attacker)
+        public Result CanAttack(PlayingCard? card, User user)
         {
-            var myGameInfo = GetMyPlayerInformation(userId);
-            var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
+            var errors = new List<OPSException>();
 
-            return Turn > 1 && attackerCard != null && (attackerCard.Turn > 1 || attackerCard.CardInfo.IsRush) && !attackerCard.Rested;
+            if (card == null)
+            {
+                errors.Add(new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND"));
+            }
+
+            if (Turn <= 0) //TODO 1
+            {
+                errors.Add(new ErrorUserActionException(user.Id, "GAME_PLAYER_CANT_ATTACK_FIRST_TURN"));
+            }
+
+            if (card.Turn <= 0) //TODO 1
+            {
+                if (!card.IsRush(user, this))
+                {
+                    errors.Add(new ErrorUserActionException(user.Id, "GAME_PLAYER_CHARACTER_CANT_ATTACK_FIRST_TURN"));
+                }
+            }
+
+            if (card.Rested)
+            {
+                errors.Add(new ErrorUserActionException(user.Id, "GAME_PLAYER_CHARACTER_CANT_ATTACK_RESTED"));
+            }
+
+            return new Result(errors);
+        }
+
+        public List<PlayingCard> GetAttackableCards(User user)
+        {
+            var opponentGameInfo = GetOpponentPlayerInformation(user.Id);
+            var cards = new List<PlayingCard>();
+            cards.Add(opponentGameInfo.Leader);
+            cards.AddRange(opponentGameInfo.GetCharacters().Where(x => x.Rested));
+            if (cards.Count == 0)
+            {
+                throw new ErrorUserActionException(user.Id, "GAME_NO_CARDS_TO_ATTACK");
+            }
+
+            return cards;
+        }
+
+        public List<PlayingCard> GetCounterCards(User user)
+        {
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            return gameInfo.Hand.Where(x => x.GetTotalCounter() != 0).ToList();
+        }
+
+        public List<PlayingCard> GetBlockerCards(User user)
+        {
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            return gameInfo.GetCharacters().Where(x => x.IsBlocker(user, this)).ToList();
+        }
+
+        public Result CanSummon(User user, Guid cardId)
+        {
+            var errors = new List<OPSException>();
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var handCard = gameInfo.Hand.FirstOrDefault(x => x.Id == cardId);
+            if (handCard != null)
+            {
+                if (gameInfo.DonAvailable < handCard.GetTotalCost())
+                {
+                    errors.Add(new ErrorUserActionException(user.Id, "GAME_NOT_ENOUGH_DON_CARDS", gameInfo.DonAvailable.ToString(), handCard.GetTotalCost().ToString()));
+                }
+
+                if (handCard.CardInfo.CardCategory == CardCategory.LEADER || handCard.CardInfo.CardCategory == CardCategory.EVENT)
+                {
+                    errors.Add(new ErrorUserActionException(user.Id, "GAME_CARD_CANNOT_BE_SUMMONED"));
+                }
+
+                if (handCard.CardInfo.CardCategory == CardCategory.CHARACTER && !gameInfo.HasEmptyCharacter())
+                {
+                    errors.Add(new ErrorUserActionException(user.Id, "GAME_CHARACTERS_FULL"));
+                }
+            } else
+            {
+                errors.Add(new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND"));
+            }
+
+            return new Result(errors);
+        }
+
+        public RuleResponse OnPlay(User user, PlayingCard card)
+        {
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            var ruleResponse = card.Script.OnPlay(user, gameInfo, this, card, card);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnSummoned(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnSummoned(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnTrash(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnTrash(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnTrash(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse Summon(User user, Guid cardId, Guid replaceId = default)
+        {
+            var response = new RuleResponse();
+
+            //Can summon (enough spaces) or replace character id is set
+            var resultSummon = CanSummon(user, cardId);
+            if (!resultSummon.Success && replaceId == default)
+            {
+                resultSummon.ThrowIfError();
+                throw new ErrorUserActionException(user.Id, "GAME_CARD_CANNOT_BE_SUMMONED");
+            }
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var handCard = gameInfo.Hand.First(x => x.Id == cardId);
+
+            if (handCard.CardInfo.CardCategory == CardCategory.STAGE)
+            {
+                var trashCard = gameInfo.SetStage(handCard);
+                response.Add(OnPlay(user, handCard));
+
+                if (trashCard != null)
+                {
+                    response.Add(OnTrash(user, trashCard));
+                }
+            }
+            else if (handCard.CardInfo.CardCategory == CardCategory.CHARACTER)
+            {
+                if (gameInfo.HasEmptyCharacter())
+                {
+                    _ = gameInfo.SetFirstEmptyCharacters(handCard);
+                    response.Add(OnPlay(user, handCard));
+                }
+                else
+                {
+                    var replacedCard = gameInfo.ReplaceCharacter(handCard, replaceId);
+                    if (replacedCard == null)
+                    {
+                        throw new ErrorUserActionException(user.Id, "GAME_CHARACTERS_FULL");
+                    }
+
+                    gameInfo.ReplaceCharacter(handCard, replaceId);
+                    response.Add(OnPlay(user, handCard));
+                    response.Add(OnTrash(user, replacedCard));
+
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_CARD_TRASH", user.Username, replacedCard.CardInfo.Name));
+                }
+            }
+
+            gameInfo.UseDonCard(handCard.GetTotalCost());
+            gameInfo.RemoveFromHand(cardId);
+            response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
+
+            return response;
         }
     }
 }

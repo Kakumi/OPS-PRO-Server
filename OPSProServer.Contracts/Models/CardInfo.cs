@@ -24,10 +24,16 @@ namespace OPSProServer.Contracts.Models
         public bool IsRush { get; private set; }
         public bool IsDoubleAttack { get; private set; }
         public bool IsBanish { get; private set; }
+        public bool CanGainBlocker { get; private set; }
+        public bool CanGainRush { get; private set; }
+        public bool CanGainDoubleAttack { get; private set; }
+        public bool CanGainBanish { get; private set; }
         public bool IsTrigger { get; private set; }
+        public bool IsEventCounter { get; private set; }
+        public bool HasActivateEffect { get; private set; }
 
         [JsonConstructor]
-        public CardInfo(string id, List<string>? images, string number, string rarity, string cardType, string name, int cost, string? attributeImage, string attribute, int power, int counter, List<string> colors, List<string> types, List<string> effects, string? set, bool isBlocker, bool isRush, bool isDoubleAttack, bool isBanish, bool isTrigger)
+        public CardInfo(string id, List<string>? images, string number, string rarity, string cardType, string name, int cost, string? attributeImage, string attribute, int power, int counter, List<string> colors, List<string> types, List<string> effects, string? set, bool isBlocker, bool isRush, bool isDoubleAttack, bool isBanish, bool canGainBlocker, bool canGainRush, bool canGainDoubleAttack, bool canGainBanish, bool isTrigger, bool isEventCounter, bool hasActivateEffect)
         {
             Id = id;
             Images = images;
@@ -48,7 +54,13 @@ namespace OPSProServer.Contracts.Models
             IsRush = isRush;
             IsDoubleAttack = isDoubleAttack;
             IsBanish = isBanish;
+            CanGainBlocker = canGainBlocker;
+            CanGainRush = canGainRush;
+            CanGainDoubleAttack = canGainDoubleAttack;
+            CanGainBanish = canGainBanish;
             IsTrigger = isTrigger;
+            IsEventCounter = isEventCounter;
+            HasActivateEffect = hasActivateEffect;
         }
 
         public string GetScriptCode()

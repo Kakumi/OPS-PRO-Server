@@ -1,4 +1,5 @@
 ﻿using OPSProServer.Contracts.Models;
+using OPSProServer.Contracts.Models.Scripts;
 
 namespace OPSProServer.Services
 {
@@ -6,14 +7,5 @@ namespace OPSProServer.Services
     {
         IEnumerable<CardInfo> GetCardsInfo();
         CardInfo? GetCardInfo(string id);
-        ICardScript? GetCardScript(PlayingCard playingCard);
-
-        public bool IsBlocker(PlayingCard playingCard, User user, Game game);
-
-        public bool IsRusher(PlayingCard playingCard, User user, Game game);
-
-        public bool IsDoubleAttack(PlayingCard playingCard, User user, Game game);
-
-        public bool IsBanish(PlayingCard playingCard, User user, Game game);
     }
 }

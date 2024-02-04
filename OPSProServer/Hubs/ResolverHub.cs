@@ -33,31 +33,27 @@ namespace OPSProServer.Hubs
             return null;
         }
 
-        private List<FlowResponseMessage> ResolveBlocker(FlowArgs args)
+        private RuleResponse ResolveBlocker(FlowArgs args)
         {
-            var list = new List<FlowResponseMessage>();
+            var response = new RuleResponse();
 
             var room = _roomManager.GetRoom(args.User);
             var blockers = _gameRuleService.GetBlockerCards(room!.Opponent!, room, room.Game!);
             var blocker = blockers.FirstOrDefault(y => args.Response.CardsId.Any(x => x == y.Id));
             if (blocker != default)
             {
-                list.Add(new FlowResponseMessage(room, new UserGameMessage("GAME_USE_BLOCKER", args.User.Username, blocker.CardInfo.Name)));
+                response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_BLOCKER", args.User.Username, blocker.CardInfo.Name));
 
                 args.FlowAction.ToCardId = blocker.Id;
                 var nextFlowAction = PrepareAttackCheckOpponentCounters(args.FlowAction.FromUser.Id, args.FlowAction.FromCardId!.Value, args.FlowAction.ToCardId!.Value);
                 if (nextFlowAction != null)
                 {
-                    args.FlowAction.AddLast(nextFlowAction);
-                }
-                else
-                {
-                    //await ResolveAttack(args.FlowAction.FromUser.Id, args.FlowAction.FromCardId!.Value, args.FlowAction.ToCardId!.Value);
+                    response.FlowAction = nextFlowAction;
                 }
 
             }
 
-            return list;
+            return response;
         }
 
         private FlowAction? PrepareAttackCheckOpponentCounters(Guid userAttackerId, Guid attacker, Guid target)
@@ -84,16 +80,9 @@ namespace OPSProServer.Hubs
             return null;
         }
 
-        private List<FlowResponseMessage> ResolveCounter(FlowArgs args)
+        private RuleResponse ResolveCounter(FlowArgs args)
         {
-            var list = new List<FlowResponseMessage>();
-
-            var response = _gameRuleService.UseCounters(args.User, args.Room, args.Game, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
-            list.AddRange(response.FlowResponses);
-
-            //await ResolveAttack(args.FlowAction.FromUser.Id, args.FlowAction.FromCardId!.Value, args.FlowAction.ToCardId!.Value);
-
-            return list;
+            return _gameRuleService.UseCounters(args.User, args.Room, args.Game, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
         }
 
         private async Task<bool> ResolveAttack(Guid userId, Guid attacker, Guid defender)
