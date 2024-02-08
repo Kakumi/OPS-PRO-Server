@@ -29,6 +29,35 @@ namespace OPSProServer.Contracts.Models
             FinalContext = FlowContext.None;
         }
 
+        public void DeepCopyContext()
+        {
+            if (NextAction != null)
+            {
+                var flowAction = NextAction;
+                while (flowAction.NextAction != null)
+                {
+                    if (flowAction.NextAction.FinalContext == FlowContext.None || flowAction.NextAction.FinalContext == flowAction.FinalContext)
+                    {
+                        flowAction.NextAction.FinalContext = flowAction.FinalContext;
+                        flowAction = flowAction.NextAction;
+                    } else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        public void AddAfter(FlowAction action)
+        {
+            if (NextAction != null)
+            {
+                action.AddLast(NextAction);
+            }
+
+            NextAction = action;
+        }
+
         public void AddFirst(FlowAction action)
         {
             if (NextAction != null)
@@ -37,6 +66,8 @@ namespace OPSProServer.Contracts.Models
             }
 
             NextAction = action;
+
+            DeepCopyContext();
         }
 
         public void AddLast(FlowAction action)
@@ -48,6 +79,8 @@ namespace OPSProServer.Contracts.Models
             }
 
             flowAction.NextAction = action;
+
+            DeepCopyContext();
         }
     }
 }

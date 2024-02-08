@@ -4,6 +4,8 @@
     {
         public PhaseType PhaseType => PhaseType.Main;
 
+        public PhaseState State { get; set; }
+
         public bool IsActionAllowed(CardSource source, CardAction action)
         {
             return action == CardAction.See ||
@@ -25,12 +27,14 @@
             return new EndPhase();
         }
 
-        public void OnPhaseEnded(Game game)
+        public RuleResponse OnPhaseEnded(PlayerGameInformation gameInfo, Game game)
         {
+            return new RuleResponse();
         }
 
-        public void OnPhaseStarted(Game game)
+        public RuleResponse OnPhaseStarted(PlayerGameInformation gameInfo, Game game)
         {
+            return new RuleResponse();
         }
 
         public bool IsAutoNextPhase()

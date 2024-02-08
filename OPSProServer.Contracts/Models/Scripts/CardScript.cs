@@ -85,12 +85,32 @@ namespace OPSProServer.Contracts.Models.Scripts
             return new RuleResponse();
         }
 
-        public virtual RuleResponse OnDraw(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
+        public virtual RuleResponse OnDonRestUp(User user, PlayerGameInformation gameInfo, Game game)
         {
             return new RuleResponse();
         }
 
-        public virtual RuleResponse OnEndTurn(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
+        public virtual RuleResponse OnDrawDon(User user, PlayerGameInformation gameInfo, Game game, int amount)
+        {
+            return new RuleResponse();
+        }
+
+        public virtual RuleResponse OnPhaseBegin(User user, PlayerGameInformation gameInfo, Game game, PhaseType phaseType)
+        {
+            return new RuleResponse();
+        }
+
+        public virtual RuleResponse OnPhaseEnd(User user, PlayerGameInformation gameInfo, Game game, PhaseType phaseType)
+        {
+            return new RuleResponse();
+        }
+
+        public virtual RuleResponse OnDraw(User user, PlayerGameInformation gameInfo, Game game, PlayingCard card)
+        {
+            return new RuleResponse();
+        }
+
+        public virtual RuleResponse OnEndTurn(User user, PlayerGameInformation gameInfo, Game game)
         {
             return new RuleResponse();
         }
@@ -130,7 +150,7 @@ namespace OPSProServer.Contracts.Models.Scripts
             return new RuleResponse();
         }
 
-        public virtual RuleResponse OnStartTurn(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
+        public virtual RuleResponse OnStartTurn(User user, PlayerGameInformation gameInfo, Game game)
         {
             return new RuleResponse();
         }

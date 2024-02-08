@@ -21,8 +21,8 @@ namespace OPSProServer.Contracts.Models
 
         public Game StartGame(Guid userToStart)
         {
-            var creatorInfo = new PlayerGameInformation(Creator.Id, Creator.Username, Creator.Deck!, userToStart == Creator.Id ? new RefreshPhase() : new OpponentPhase());
-            var opponentInfo = new PlayerGameInformation(Opponent!.Id, Opponent.Username, Opponent.Deck!, userToStart == Opponent.Id ? new RefreshPhase() : new OpponentPhase());
+            var creatorInfo = new PlayerGameInformation(Creator, Creator.Deck!,new OpponentPhase(userToStart == Creator.Id));
+            var opponentInfo = new PlayerGameInformation(Opponent, Opponent.Deck!, new OpponentPhase(userToStart == Opponent.Id));
             State = RoomState.InGame;
             Game = new Game(userToStart, creatorInfo, opponentInfo);
             return Game;

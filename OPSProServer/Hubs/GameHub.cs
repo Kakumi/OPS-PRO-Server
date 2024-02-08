@@ -105,6 +105,7 @@ namespace OPSProServer.Hubs
         [Connected(true)]
         public async Task<bool> LaunchGame(Guid userToStart)
         {
+            var ruleResponse = new RuleResponse();
             var user = Context.Items["user"] as User;
             var room = Context.Items["room"] as Room;
 
@@ -112,7 +113,6 @@ namespace OPSProServer.Hubs
             {
                 var userStart = _userManager.GetUser(userToStart)!;
                 var game = room.StartGame(userToStart);
-                game.PhaseChanged += Game_PhaseChanged;
 
                 await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.GameStarted), userToStart);
                 await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), game);
@@ -120,53 +120,10 @@ namespace OPSProServer.Hubs
                 await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", room.Opponent.Username));
                 await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_USER_START", userStart.Username));
 
-                if (game.GetCurrentPlayerGameInformation().CurrentPhase!.IsAutoNextPhase())
-                {
-                    await game.UpdatePhase();
-                }
-
-                game.PhaseChanged -= Game_PhaseChanged;
-
-                return true;
+                return await ManageFlowAction(user, room, ruleResponse);
             }
 
             return false;
-        }
-
-        //We need to subscribe -> execute -> unsubscribe because:
-        //When the first called is made (launch game) the event is subscribed on the right context (not disposed)
-        //But for a second called for "NextPhase", the event will use the context it was registered on (disposed at this time)
-        //So, we need to remove the subscriber after all calls and then subcribe it again before each calls.
-        private async void Game_PhaseChanged(object? sender, PhaseChangedArgs e)
-        {
-            try
-            {
-                var user = _userManager.GetUser(e.Game.PlayerTurn);
-                if (user != null)
-                {
-                    var room = _roomManager.GetRoom(user);
-
-                    if (room != null)
-                    {
-                        var opponent = room.Opponent;
-                        if (e.NewPhaseType == PhaseType.Opponent && e.OldPhaseType == PhaseType.End)
-                        {
-                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("PLAYER_END_TURN", user.Username));
-                            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("PLAYER_START_TURN", opponent!.Username));
-                            await e.Game.NextPlayer();
-                        }
-
-                        await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), e.Game);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, ex.Message);
-            } finally
-            {
-                e.WaitCompletion.SetResult(true);
-            }
         }
 
         [Connected(true, true, true)]
@@ -175,9 +132,12 @@ namespace OPSProServer.Hubs
             var user = Context.Items["user"] as User;
             var room = Context.Items["room"] as Room;
 
-            room!.Game!.PhaseChanged += Game_PhaseChanged;
-            await room.Game.UpdatePhase();
-            room.Game.PhaseChanged -= Game_PhaseChanged;
+            var response = room!.Game!.CheckUpdatePhaseState(true);
+
+            if (response != null)
+            {
+                await ManageFlowAction(user!, room, response);
+            }
 
             return true;
         }
@@ -203,9 +163,6 @@ namespace OPSProServer.Hubs
                 flowAction.FinalContext = FlowContext.Attack;
 
                 return await ManageFlowAction(user, room, flowAction);
-
-                //var result = new AttackableResult(attacker, cards.Ids());
-                //await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.AttackableCards), result);
             }
 
             return true;
@@ -291,9 +248,17 @@ namespace OPSProServer.Hubs
                 await SendFlowMessage(room, flowMessage);
             }
 
+            await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game!);
+
             if (ruleResponse.FlowAction != null)
             {
                 return await ManageFlowAction(user, room, ruleResponse.FlowAction);
+            }
+
+            var newResponse = room.Game!.CheckUpdatePhaseState(false);
+            if (newResponse != null)
+            {
+                return await ManageFlowAction(user, room, newResponse);
             }
 
             return true;
@@ -331,24 +296,26 @@ namespace OPSProServer.Hubs
                 await Clients.Client(opponent!.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
 
                 var ruleResponse = flow.Action(new FlowArgs(user!, room!, room!.Game!, flow, response));
-                if (ruleResponse.FlowAction != null)
-                {
-                    if (ruleResponse.PriorityFlowAction)
-                    {
-                        flow.AddFirst(ruleResponse.FlowAction);
-                    } else
-                    {
-                        flow.AddLast(ruleResponse.FlowAction);
-                    }
-                }
-
-                foreach (var message in ruleResponse.FlowResponses)
-                {
-                    await SendFlowMessage(room, message);
-                }
 
                 var nextFlow = _resolverManager.Resolve(flow.Id);
-                if (nextFlow == null || nextFlow.FinalContext != flow.FinalContext)
+                if (nextFlow != null) 
+                {
+                    if (ruleResponse.FlowAction != null)
+                    {
+                        if (ruleResponse.PriorityFlowAction)
+                        {
+                            nextFlow.AddFirst(ruleResponse.FlowAction);
+                        }
+                        else
+                        {
+                            nextFlow.AddLast(ruleResponse.FlowAction);
+                        }
+                    }
+
+                    ruleResponse.FlowAction = nextFlow;
+                }
+
+                if (ruleResponse.FlowAction == null || ruleResponse.FlowAction.FinalContext != flow.FinalContext)
                 {
                     FlowAction? customNextFlow = null;
                     switch (flow.FinalContext)
@@ -373,25 +340,18 @@ namespace OPSProServer.Hubs
 
                     if (customNextFlow != null)
                     {
-                        if (nextFlow == null)
+                        if (ruleResponse.FlowAction == null)
                         {
-                            nextFlow = customNextFlow;
+                            ruleResponse.FlowAction = customNextFlow;
                         }
                         else
                         {
-                            nextFlow.AddLast(customNextFlow);
+                            ruleResponse.FlowAction.AddLast(customNextFlow);
                         }
                     }
                 }
 
-                if (nextFlow != null)
-                {
-                    await ManageFlowAction(user!, room!, nextFlow);
-                }
-
-                await Clients.Group(room!.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
-
-                return true;
+                return await ManageFlowAction(user, room, ruleResponse);
             }
 
             return false;

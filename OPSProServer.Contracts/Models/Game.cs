@@ -44,35 +44,50 @@ namespace OPSProServer.Contracts.Models
             FirstToPlay = firstToPlay;
             CreatorGameInformation = creatorGameInformation;
             OpponentGameInformation = opponentGameInformation;
-
-            CreatorGameInformation.CurrentPhase!.OnPhaseStarted(this);
-            OpponentGameInformation.CurrentPhase!.OnPhaseStarted(this);
         }
 
-        public async Task UpdatePhase()
+        public RuleResponse? CheckUpdatePhaseState(bool goNext = false)
         {
+            var response = new RuleResponse();
             var currentPlayerInfo = GetCurrentPlayerGameInformation();
-            var oldPhase = currentPlayerInfo.CurrentPhase!;
-            var newPhase = currentPlayerInfo.CurrentPhase!.NextPhase();
-
-            currentPlayerInfo.CurrentPhase.OnPhaseEnded(this);
-            currentPlayerInfo.CurrentPhase = newPhase;
-            currentPlayerInfo.CurrentPhase.OnPhaseStarted(this);
-
-            if (PhaseChanged != null)
+            var canGoNext = goNext || currentPlayerInfo.CurrentPhase!.IsAutoNextPhase();
+            if (currentPlayerInfo.CurrentPhase!.State == PhaseState.Ending)
             {
-                var args = new PhaseChangedArgs(oldPhase.PhaseType, newPhase.PhaseType, this);
-                PhaseChanged.Invoke(this, args);
-                await args.WaitCompletion.Task;
+                var oldPhase = currentPlayerInfo.CurrentPhase;
+                var newPhase = currentPlayerInfo.CurrentPhase!.NextPhase();
+                newPhase.State = PhaseState.Active;
+                currentPlayerInfo.CurrentPhase = newPhase;
+                response.Add(currentPlayerInfo.GetBoard().Select(x => x.Script.OnPhaseBegin(currentPlayerInfo.User, currentPlayerInfo, this, newPhase.PhaseType)));
+                response.Add(currentPlayerInfo.CurrentPhase.OnPhaseStarted(currentPlayerInfo, this));
+
+                if (newPhase.PhaseType == PhaseType.Opponent && oldPhase.PhaseType == PhaseType.End)
+                {
+                    var nextPlayerResponse = NextPlayer();
+                    if (nextPlayerResponse != null)
+                    {
+                        response.Add(nextPlayerResponse);
+                    }
+                }
+            } else if (currentPlayerInfo.CurrentPhase.State == PhaseState.Active)
+            {
+                if (canGoNext)
+                {
+                    currentPlayerInfo.CurrentPhase.State = PhaseState.Beginning;
+                } else
+                {
+                    return null;
+                }
+            } else
+            {
+                response.Add(currentPlayerInfo.CurrentPhase.OnPhaseEnded(currentPlayerInfo, this));
+                response.Add(currentPlayerInfo.GetBoard().Select(x => x.Script.OnPhaseEnd(currentPlayerInfo.User, currentPlayerInfo, this, currentPlayerInfo.CurrentPhase.PhaseType)));
+                currentPlayerInfo.CurrentPhase.State = PhaseState.Ending;
             }
 
-            if (currentPlayerInfo.CurrentPhase.IsAutoNextPhase())
-            {
-                await UpdatePhase();
-            }
+            return response;
         }
 
-        public async Task NextPlayer()
+        public RuleResponse? NextPlayer()
         {
             Guid oldPlayerId = PlayerTurn;
             Guid newPlayerId = GetOpponentPlayerInformation(PlayerTurn).UserId;
@@ -80,7 +95,7 @@ namespace OPSProServer.Contracts.Models
 
             PlayerChanged?.Invoke(this, new PlayerChangedArgs(oldPlayerId, newPlayerId, this));
 
-            await UpdatePhase();
+            return CheckUpdatePhaseState();
         }
 
         public PlayerGameInformation GetCurrentPlayerGameInformation()

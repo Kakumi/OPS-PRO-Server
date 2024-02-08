@@ -6,6 +6,19 @@ namespace OPSProServer.Contracts.Models
     {
         public PhaseType PhaseType => PhaseType.Opponent;
 
+        public PhaseState State { get; set; }
+
+        public OpponentPhase(bool playFirst)
+        {
+            if (playFirst)
+            {
+                State = PhaseState.Ending;
+            } else
+            {
+                State = PhaseState.Beginning;
+            }
+        }
+
         public bool IsActionAllowed(CardSource source, CardAction action)
         {
             return action == CardAction.See;
@@ -17,12 +30,14 @@ namespace OPSProServer.Contracts.Models
             return new RefreshPhase();
         }
 
-        public void OnPhaseEnded(Game game)
+        public RuleResponse OnPhaseEnded(PlayerGameInformation gameInfo, Game game)
         {
+            return new RuleResponse();
         }
 
-        public void OnPhaseStarted(Game game)
+        public RuleResponse OnPhaseStarted(PlayerGameInformation gameInfo, Game game)
         {
+            return new RuleResponse();
         }
 
         public bool IsAutoNextPhase()

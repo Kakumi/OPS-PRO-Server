@@ -11,6 +11,7 @@ namespace OPSProServer.Contracts.Models
     {
         public Guid UserId { get; private set; }
         public string Username { get; private set; }
+        public User User { get; private set; }
         public bool Waiting { get; set; }
         public DeckInfo SelectedDeck { get; private set; }
         public List<PlayingCard> Deck { get; private set; }
@@ -25,7 +26,7 @@ namespace OPSProServer.Contracts.Models
         public PlayingCard Leader { get; private set; }
         private IPhase? _currentPhase;
         public IPhase? CurrentPhase
-        {
+            {
             get => _currentPhase;
             internal set
             {
@@ -51,10 +52,11 @@ namespace OPSProServer.Contracts.Models
         }
 
         [JsonConstructor]
-        public PlayerGameInformation(Guid userId, string username, bool waiting, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard[] characters, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
+        public PlayerGameInformation(Guid userId, string username, User user, bool waiting, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard[] characters, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
         {
             UserId = userId;
             Username = username;
+            User = user;
             Waiting = waiting;
             SelectedDeck = selectedDeck;
             Deck = deck;
@@ -73,12 +75,13 @@ namespace OPSProServer.Contracts.Models
 
         public bool HasRedrawn { get; set; }
 
-        public PlayerGameInformation(Guid userId, string username, DeckInfo selectedDeck, IPhase phase)
+        public PlayerGameInformation(User user, DeckInfo selectedDeck, IPhase phase)
         {
             HasRedrawn = false;
 
-            UserId = userId;
-            Username = username;
+            UserId = user.Id;
+            Username = user.Username;
+            User = user;
             Waiting = false;
             SelectedDeck = selectedDeck;
             Deck = new List<PlayingCard>();
@@ -301,7 +304,7 @@ namespace OPSProServer.Contracts.Models
                 case PhaseType.Draw: return new DrawPhase();
                 case PhaseType.Main: return new MainPhase();
                 case PhaseType.End: return new EndPhase();
-                case PhaseType.Opponent: return new OpponentPhase();
+                case PhaseType.Opponent: return new OpponentPhase(false);
             }
 
             throw new NotImplementedException();

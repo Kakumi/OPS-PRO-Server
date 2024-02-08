@@ -4,9 +4,10 @@ namespace OPSProServer.Contracts.Models
 {
     public interface IPhase
     {
+        PhaseState State { get; set; }
         PhaseType PhaseType { get; }
-        void OnPhaseStarted(Game game);
-        void OnPhaseEnded(Game game);
+        RuleResponse OnPhaseStarted(PlayerGameInformation gameInfo, Game game);
+        RuleResponse OnPhaseEnded(PlayerGameInformation gameInfo, Game game);
         bool IsActionAllowed(CardSource source, CardAction action);
         IPhase NextPhase();
         bool IsAutoNextPhase();

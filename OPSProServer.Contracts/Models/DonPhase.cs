@@ -1,8 +1,12 @@
-﻿namespace OPSProServer.Contracts.Models
+﻿using System.Linq;
+
+namespace OPSProServer.Contracts.Models
 {
     public class DonPhase : IPhase
     {
         public PhaseType PhaseType => PhaseType.Don;
+
+        public PhaseState State { get; set; }
 
         public bool IsActionAllowed(CardSource source, CardAction action)
         {
@@ -14,22 +18,33 @@
             return new MainPhase();
         }
 
-        public void OnPhaseEnded(Game game)
+        public RuleResponse OnPhaseEnded(PlayerGameInformation gameInfo, Game game)
         {
+            return new RuleResponse();
         }
 
-        public void OnPhaseStarted(Game game)
+        public RuleResponse OnPhaseStarted(PlayerGameInformation gameInfo, Game game)
         {
-            var playerInfo = game.GetCurrentPlayerGameInformation();
+            var ruleResponse = new RuleResponse();
 
+            var playerInfo = game.GetCurrentPlayerGameInformation();
+            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.UserId);
+
+            int amount;
             if (game.FirstToPlay == game.PlayerTurn && game.Turn == 1)
             {
-                playerInfo.DrawDonCard(1);
+                amount = 1;
             }
             else
             {
-                playerInfo.DrawDonCard(2);
+                amount = 2;
             }
+
+            playerInfo.DrawDonCard(amount);
+            ruleResponse.Add(playerInfo.GetBoard().Select(x => x.Script.OnDrawDon(playerInfo.User, playerInfo, game, amount)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDrawDon(playerInfo.User, opponentInfo, game, amount)));
+
+            return ruleResponse;
         }
 
         public bool IsAutoNextPhase()
