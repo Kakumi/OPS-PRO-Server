@@ -18,16 +18,14 @@ namespace OPSProServer.Hubs
         protected readonly IRoomManager _roomManager;
         protected readonly IUserManager _userManager;
         protected readonly IFlowManager _resolverManager;
-        protected readonly IGameRuleService _gameRuleService;
 
-        public GameHub(ILogger<GameHub> logger, ICardService cardService, IRoomManager roomManager, IUserManager userManager, IFlowManager resolverManager, IGameRuleService gameRuleService)
+        public GameHub(ILogger<GameHub> logger, ICardService cardService, IRoomManager roomManager, IUserManager userManager, IFlowManager resolverManager)
         {
             _logger = logger;
             _cardService = cardService;
             _roomManager = roomManager;
             _userManager = userManager;
             _resolverManager = resolverManager;
-            _gameRuleService = gameRuleService;
         }
 
         [Connected(true)]
@@ -191,10 +189,11 @@ namespace OPSProServer.Hubs
             var room = Context.Items["room"] as Room;
             var myGameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
             var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(user.Id);
+            var result = room.Game.CanAttack(myGameInfo.GetCard(attacker), user);
 
-            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room, room.Game))
+            if (result.Success)
             {
-                var cards = _gameRuleService.GetAttackableCards(user, room, room.Game);
+                var cards = room.Game.GetAttackableCards(user);
 
                 var flowAction = new FlowAction(user, user, ResolveAttackable);
                 var flowRequest = new FlowActionRequest(flowAction.Id, user, "GAME_CHOOSE_ATTACK_OPPONENT", cards.Ids().ToList(), 1, 1, true);
@@ -224,8 +223,9 @@ namespace OPSProServer.Hubs
             var room = Context.Items["room"] as Room;
             var myGameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
             var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(user.Id);
+            var result = room.Game.CanAttack(myGameInfo.GetCard(attacker), user);
 
-            if (_gameRuleService.CanAttack(myGameInfo.GetCard(attacker), user, room, room.Game))
+            if (result.Success)
             {
                 var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
                 var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
@@ -243,7 +243,11 @@ namespace OPSProServer.Hubs
                         return await ManageFlowAction(user, room, counterFlow);
                     }
 
-                    return await ResolveAttack(user.Id, attacker, target);
+                    var nextAction = await ResolveAttack(user.Id, attacker, target);
+                    if (nextAction != null)
+                    {
+                        return await ManageFlowAction(user, room, nextAction);
+                    }
                 }
             }
 
@@ -257,15 +261,10 @@ namespace OPSProServer.Hubs
             var room = Context.Items["room"] as Room;
             var gameInfo = room!.Game!.GetMyPlayerInformation(user!.Id);
 
-            var response = _gameRuleService.GiveDon(user, room, room.Game, characterCardId);
+            var response = room.Game.GiveDon(user, characterCardId);
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
 
-            foreach (var message in response.FlowResponses)
-            {
-                await SendFlowMessage(room, message);
-            }
-
-            return true;
+            return await ManageFlowAction(user!, room, response);
         }
 
         [Connected(true, true, true)]
@@ -274,20 +273,30 @@ namespace OPSProServer.Hubs
             var user = Context.Items["user"] as User;
             var room = Context.Items["room"] as Room;
             var gameInfo = room!.Game!.GetCurrentPlayerGameInformation();
-            var response = _gameRuleService.Summon(user!, room, room.Game, cardId);
+            var response = room.Game.Summon(user!, cardId);
             await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), room.Game);
-            foreach(var message in response.FlowResponses)
-            {
-                await SendFlowMessage(room, message);
-            }
 
-            return true;
+            return await ManageFlowAction(user!, room, response);
         }
 
         [Connected(true, true, true)]
         public Task<bool> ActivateCardEffect(Guid characterCardId)
         {
             throw new NotImplementedException();
+        }
+
+        private async Task<bool> ManageFlowAction(User user, Room room, RuleResponse ruleResponse)
+        {
+            foreach(var flowMessage in ruleResponse.FlowResponses) {
+                await SendFlowMessage(room, flowMessage);
+            }
+
+            if (ruleResponse.FlowAction != null)
+            {
+                return await ManageFlowAction(user, room, ruleResponse.FlowAction);
+            }
+
+            return true;
         }
 
         private async Task<bool> ManageFlowAction(User user, Room room, FlowAction action)
@@ -341,6 +350,7 @@ namespace OPSProServer.Hubs
                 var nextFlow = _resolverManager.Resolve(flow.Id);
                 if (nextFlow == null || nextFlow.FinalContext != flow.FinalContext)
                 {
+                    FlowAction? customNextFlow = null;
                     switch (flow.FinalContext)
                     {
                         case FlowContext.None:
@@ -355,10 +365,22 @@ namespace OPSProServer.Hubs
                         case FlowContext.ResolveAttack:
                             if (flow.FromCardId != null && flow.ToCardId != null)
                             {
-                                await ResolveAttack(flow.FromUser.Id, flow.FromCardId!.Value,  flow.ToCardId!.Value);
+                                customNextFlow = await ResolveAttack(flow.FromUser.Id, flow.FromCardId!.Value,  flow.ToCardId!.Value);
                             }
 
                             break;
+                    }
+
+                    if (customNextFlow != null)
+                    {
+                        if (nextFlow == null)
+                        {
+                            nextFlow = customNextFlow;
+                        }
+                        else
+                        {
+                            nextFlow.AddLast(customNextFlow);
+                        }
                     }
                 }
 

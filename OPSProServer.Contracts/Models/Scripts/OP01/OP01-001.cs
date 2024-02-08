@@ -24,5 +24,10 @@ namespace OPSProServer.Contracts.Models.Scripts.OP01
 
             return response;
         }
+
+        public override RuleResponse OnCounter(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
+        {
+            return base.OnCounter(user, gameInfo, game, callerCard, actionCard);
+        }
     }
 }

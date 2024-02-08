@@ -142,12 +142,12 @@ namespace OPSProServer.Contracts.Models
 
         public bool IsBlocker(User user, Game game)
         {
-            return CardInfo.IsBlocker || Script.IsBlocker(user, game, this);
+            return CardInfo.IsBlocker || Script.IsBlocker(user, game.GetMyPlayerInformation(user.Id), game, this);
         }
 
         public bool IsRush(User user, Game game)
         {
-            return CardInfo.IsBlocker || Script.IsRush(user, game, this);
+            return CardInfo.IsBlocker || Script.IsRush(user, game.GetMyPlayerInformation(user.Id), game, this);
         }
     }
 }

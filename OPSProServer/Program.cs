@@ -20,7 +20,6 @@ builder.Services.AddSingleton<IFlowManager, FlowManager>();
 builder.Services.AddScoped<UserConnectedHubFilter>();
 builder.Services.AddScoped<ErrorHandlerFilter>();
 builder.Services.AddSingleton<ICardService, CardService>();
-builder.Services.AddSingleton<IGameRuleService, GameRuleService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

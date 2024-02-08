@@ -6,17 +6,24 @@ using System.Threading.Tasks;
 
 namespace OPSProServer.Contracts.Models
 {
+    public class RuleResponse<T> : RuleResponse where T : class
+    {
+        public T? Data { get; set; }
+    }
+
     public class RuleResponse
     {
         public FlowAction? FlowAction { get; set; }
         public bool PriorityFlowAction { get; set; }
         public List<FlowResponseMessage> FlowResponses { get; set; }
+        public User? Winner { get; set; }
 
         public RuleResponse()
         {
             FlowAction = null;
             PriorityFlowAction = true;
             FlowResponses = new List<FlowResponseMessage>();
+            Winner = null;
         }
 
         public void Add(RuleResponse ruleResponse)

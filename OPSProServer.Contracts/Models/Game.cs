@@ -2,6 +2,8 @@
 using OPSProServer.Contracts.Models.Scripts;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -201,32 +203,6 @@ namespace OPSProServer.Contracts.Models
             return new Result(errors);
         }
 
-        public RuleResponse OnPlay(User user, PlayingCard card)
-        {
-            var gameInfo = GetMyPlayerInformation(user.Id);
-            var opponentInfo = GetOpponentPlayerInformation(user.Id);
-
-            var ruleResponse = card.Script.OnPlay(user, gameInfo, this, card, card);
-
-            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnSummoned(user, gameInfo, this, x, card)));
-            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnSummoned(user, opponentInfo, this, x, card)));
-
-            return ruleResponse;
-        }
-
-        public RuleResponse OnTrash(User user, PlayingCard card)
-        {
-            var ruleResponse = new RuleResponse();
-
-            var gameInfo = GetMyPlayerInformation(user.Id);
-            var opponentInfo = GetOpponentPlayerInformation(user.Id);
-
-            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnTrash(user, gameInfo, this, x, card)));
-            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnTrash(user, opponentInfo, this, x, card)));
-
-            return ruleResponse;
-        }
-
         public RuleResponse Summon(User user, Guid cardId, Guid replaceId = default)
         {
             var response = new RuleResponse();
@@ -280,6 +256,254 @@ namespace OPSProServer.Contracts.Models
             response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_SUMMONED", user.Username, handCard.CardInfo.Name, handCard.GetTotalCost().ToString()));
 
             return response;
+        }
+
+        public RuleResponse UseCounters(User user, Guid fromCardId, List<Guid> cardsId)
+        {
+            var response = new RuleResponse();
+            var gameInfo = GetMyPlayerInformation(user.Id);
+
+            var card = gameInfo.GetCharacterOrLeader(fromCardId);
+            if (card == null)
+            {
+                throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
+            }
+
+            var counters = GetCounterCards(user);
+            var cardsToUse = counters.Where(x => cardsId.Contains(x.Id)).ToList();
+            foreach (var cardToUse in cardsToUse)
+            {
+                var removed = gameInfo.RemoveFromHand(cardToUse.Id);
+                if (removed != null)
+                {
+                    response.Add(OnCounter(user, removed));
+                    gameInfo.TrashCard(removed);
+                    response.Add(OnTrash(user, removed));
+
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
+                    card.PowerModifier.Add(new ValueModifier(ModifierDuration.Battle, cardToUse.GetTotalCounter()));
+                }
+            }
+
+            return response;
+        }
+
+        public RuleResponse<AttackResult> Attack(User user, User opponent, Guid attacker, Guid target)
+        {
+            var response = new RuleResponse<AttackResult>();
+
+            var myGameInfo = GetMyPlayerInformation(user.Id);
+            var opponentGameInfo = GetOpponentPlayerInformation(user.Id);
+            var attackerCard = myGameInfo.GetCharacterOrLeader(attacker);
+            var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
+            if (attackerCard != null && defenderCard != null)
+            {
+                var attackTotalPower = attackerCard.GetTotalPower();
+                var defenseTotalPower = defenderCard.GetTotalPower();
+
+                response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_SUCCESS", user.Username, opponent.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackTotalPower.ToString(), defenseTotalPower.ToString()));
+
+                response.Add(OnAttack(user, defenderCard));
+
+                attackerCard.Rested = true;
+
+                PlayingCard? lifeCard = null;
+                bool winner = false;
+                bool success = false;
+                if (attackTotalPower >= defenseTotalPower)
+                {
+                    success = true;
+
+                    if (defenderCard.Rested)
+                    {
+                        opponentGameInfo.KillCharacter(target);
+                        response.Add(OnKO(opponent, defenderCard));
+                    }
+
+                    if (defenderCard.CardInfo.CardCategory == CardCategory.LEADER)
+                    {
+                        if (opponentGameInfo.Lifes.Count > 0)
+                        {
+                            lifeCard = opponentGameInfo.RemoveLifeCard();
+                            if (lifeCard.CardInfo.IsTrigger)
+                            {
+                                var flowAction = new FlowAction(user, opponent, UseOrAddLifeCard);
+                                var flowRequest = new FlowActionRequest(flowAction.Id, opponent, "GAME_ASK_LIFECARD", new List<Guid>() { lifeCard.Id }, 0, 1, true);
+                                flowAction.Request = flowRequest;
+                                flowAction.FromCardId = lifeCard.Id;
+                            } else
+                            {
+                                response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD", lifeCard.CardInfo.Name));
+                                response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD_ATTACKER", opponent.Username));
+                                opponentGameInfo.AddHandCard(lifeCard);
+                                response.Add(OnAddLifeCardToHand(opponent, lifeCard));
+                            }
+
+                            response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_LOOSE_LIFE", opponent.Username, opponentGameInfo.Lifes.Count().ToString()));
+                        }
+                        else
+                        {
+                            response.Winner = user;
+                            winner = true;
+                        }
+                    }
+                } else
+                {
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_FAILED", myGameInfo.Username, opponentGameInfo.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackerCard.GetTotalPower().ToString(), defenderCard.GetTotalPower().ToString()));
+                }
+
+                attackerCard.RemoveStatDuration(ModifierDuration.Attack);
+                defenderCard.RemoveStatDuration(ModifierDuration.Defense);
+                attackerCard.RemoveStatDuration(ModifierDuration.Battle);
+                defenderCard.RemoveStatDuration(ModifierDuration.Battle);
+
+                response.Data = new AttackResult(myGameInfo, opponentGameInfo, attackerCard, defenderCard, lifeCard, attackTotalPower, defenseTotalPower, success, winner);
+
+                return response;
+            }
+
+            throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
+        }
+
+        private RuleResponse UseOrAddLifeCard(FlowArgs args)
+        {
+            return args.Room.Game!.UseCounters(args.User, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
+        }
+
+        public RuleResponse GiveDon(User user, Guid cardId)
+        {
+            var response = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            if (gameInfo.DonAvailable == 0)
+            {
+                throw new ErrorUserActionException(user.Id, "GAME_NOT_ENOUGH_DON", "1");
+            }
+
+            var card = gameInfo.GetCharacterOrLeader(cardId);
+            if (card == null)
+            {
+                throw new ErrorUserActionException(user.Id, "GAME_CARD_NOT_FOUND");
+            }
+
+            if (gameInfo.UseDonCard(1))
+            {
+                card.DonCard++;
+            }
+
+            response.Add(OnGiveDon(user, card));
+
+            response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_CHARACTER_DON_USED", user.Username, "1", card.CardInfo.Name, card.GetTotalPower().ToString()));
+
+            return response;
+        }
+
+        public RuleResponse OnCounter(User user, PlayingCard card)
+        {
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            var ruleResponse = card.Script.OnPlay(user, gameInfo, this, card, card);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnCounter(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnCounter(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnPlay(User user, PlayingCard card)
+        {
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            var ruleResponse = card.Script.OnPlay(user, gameInfo, this, card, card);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnSummoned(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnSummoned(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnTrash(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnTrash(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnTrash(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnGiveDon(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnGiveDon(user, gameInfo, this, x, card)));
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, gameInfo, this)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnGiveDon(user, opponentInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, opponentInfo, this)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnAttack(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnAttack(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnAttack(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnKO(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnKO(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnKO(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnAddLifeCardToHand(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnGetLifeCard(user, gameInfo, this, x, card)));
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnAddLifeCardToHand(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnGetLifeCard(user, opponentInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnAddLifeCardToHand(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnUseBlocker(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnBlock(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnBlock(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
         }
     }
 }
