@@ -53,12 +53,6 @@ namespace OPSProServer.Hubs
                 response.Add(args.Game.OnUseBlocker(args.User, blocker));
 
                 args.FlowAction.ToCardId = blocker.Id;
-                var nextFlowAction = PrepareAttackCheckOpponentCounters(args.FlowAction.FromUser.Id, args.FlowAction.FromCardId!.Value, args.FlowAction.ToCardId!.Value);
-                if (nextFlowAction != null)
-                {
-                    response.FlowAction = nextFlowAction;
-                }
-
             }
 
             return response;
@@ -98,18 +92,11 @@ namespace OPSProServer.Hubs
             return args.Room.Game!.UseCounters(args.User, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
         }
 
-        private async Task<FlowAction?> ResolveAttack(Guid userId, Guid attacker, Guid defender)
+        private async Task<RuleResponse?> ResolveAttack(Guid userId, Guid attacker, Guid defender)
         {
-            var response = new RuleResponse();
             User user = _userManager.GetUser(userId)!;
             Room room = _roomManager.GetRoom(user)!;
-            var result = room.Game!.Attack(user, room.GetOpponent(userId)!, attacker, defender);
-            response.Add(result);
-
-            foreach(var message in response.FlowResponses)
-            {
-                await SendFlowMessage(room, message);
-            }
+            var response = room.Game!.Attack(user, room.GetOpponent(userId)!, attacker, defender);
 
             if (response.Winner != null)
             {
@@ -117,7 +104,7 @@ namespace OPSProServer.Hubs
                 return null;
             }
 
-            return response.FlowAction;
+            return response;
         }
     }
 }

@@ -268,17 +268,22 @@ namespace OPSProServer.Hubs
                 return true;
             }
 
-            FlowAction? customNextFlow = await RunFinalContext(action, action.NextAction, null);
-            if (customNextFlow != null)
+            RuleResponse? contextResponse = await RunFinalContext(action, action.NextAction, null);
+            if (contextResponse != null)
             {
-                if (action.NextAction == null)
+                if (action.NextAction != null)
                 {
-                    action.AddFirst(customNextFlow);
+                    if (contextResponse.FlowAction == null)
+                    {
+                        contextResponse.FlowAction = action.NextAction;
+                    }
+                    else
+                    {
+                        contextResponse.FlowAction.AddLast(action.NextAction);
+                    }
                 }
-                else
-                {
-                    action.AddLast(customNextFlow);
-                }
+
+                return await ManageFlowAction(user, room, contextResponse);
             }
 
 
@@ -325,36 +330,21 @@ namespace OPSProServer.Hubs
                     ruleResponse.FlowAction = nextFlow;
                 }
 
-                FlowAction? contextNextFlow = await RunFinalContext(flow, ruleResponse.FlowAction, response);
+                RuleResponse? contextResponse = await RunFinalContext(flow, ruleResponse.FlowAction, response);
+                if (contextResponse != null)
+                {
+                    ruleResponse.Add(contextResponse);
+                }
 
                 while (ruleResponse.FlowAction != null && !ruleResponse.FlowAction.CanExecute(user, room, room.Game))
                 {
-                    FlowAction? customNextFlow = await RunFinalContext(flow, ruleResponse.FlowAction, response);
-                    if (customNextFlow != null)
+                    RuleResponse? customResponse = await RunFinalContext(flow, ruleResponse.FlowAction, response);
+                    if (customResponse != null)
                     {
-                        if (contextNextFlow == null)
-                        {
-                            contextNextFlow = customNextFlow;
-                        }
-                        else
-                        {
-                            contextNextFlow.AddLast(customNextFlow);
-                        }
+                        ruleResponse.Add(customResponse);
                     }
 
                     ruleResponse.FlowAction = ruleResponse.FlowAction.NextAction;
-                }
-
-                if (contextNextFlow != null)
-                {
-                    if (ruleResponse.FlowAction == null)
-                    {
-                        ruleResponse.FlowAction = contextNextFlow;
-                    }
-                    else
-                    {
-                        ruleResponse.FlowAction.AddLast(contextNextFlow);
-                    }
                 }
 
                 return await ManageFlowAction(user, room, ruleResponse);
@@ -378,11 +368,10 @@ namespace OPSProServer.Hubs
             }
         }
 
-        private async Task<FlowAction?> RunFinalContext(FlowAction currentAction, FlowAction? nextAction, FlowActionResponse? response)
+        private async Task<RuleResponse?> RunFinalContext(FlowAction currentAction, FlowAction? nextAction, FlowActionResponse? response)
         {
             if (nextAction == null || nextAction.FinalContext != currentAction.FinalContext)
             {
-                FlowAction? customNextFlow = null;
                 switch (currentAction.FinalContext)
                 {
                     case FlowContext.None:
@@ -397,13 +386,11 @@ namespace OPSProServer.Hubs
                     case FlowContext.ResolveAttack:
                         if (currentAction.FromCardId != null && currentAction.ToCardId != null)
                         {
-                            customNextFlow = await ResolveAttack(currentAction.FromUser.Id, currentAction.FromCardId!.Value, currentAction.ToCardId!.Value);
+                            return await ResolveAttack(currentAction.FromUser.Id, currentAction.FromCardId!.Value, currentAction.ToCardId!.Value);
                         }
 
                         break;
                 }
-
-                return customNextFlow;
             }
 
             return null;

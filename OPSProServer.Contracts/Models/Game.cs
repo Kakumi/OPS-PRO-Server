@@ -317,8 +317,6 @@ namespace OPSProServer.Contracts.Models
                 var attackTotalPower = attackerCard.GetTotalPower();
                 var defenseTotalPower = defenderCard.GetTotalPower();
 
-                response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_SUCCESS", user.Username, opponent.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackTotalPower.ToString(), defenseTotalPower.ToString()));
-
                 response.Add(OnAttack(user, defenderCard));
 
                 attackerCard.Rested = true;
@@ -328,6 +326,7 @@ namespace OPSProServer.Contracts.Models
                 bool success = false;
                 if (attackTotalPower >= defenseTotalPower)
                 {
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_SUCCESS", user.Username, opponent.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackTotalPower.ToString(), defenseTotalPower.ToString()));
                     success = true;
 
                     if (defenderCard.Rested)
