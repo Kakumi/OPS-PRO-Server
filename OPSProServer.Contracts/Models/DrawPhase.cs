@@ -28,9 +28,9 @@ namespace OPSProServer.Contracts.Models
             var ruleResponse = new RuleResponse();
 
             var playerInfo = game.GetCurrentPlayerGameInformation();
-            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.UserId);
+            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.User.Id);
 
-            if (game.FirstToPlay != playerInfo.UserId || game.Turn != 1)
+            if (game.FirstToPlay != playerInfo.User.Id || game.Turn != 1)
             {
                 var cards = playerInfo.DrawCard();
                 ruleResponse.Add(playerInfo.GetBoard().Select(x => x.Script.OnDraw(playerInfo.User, playerInfo, game, cards.First())));

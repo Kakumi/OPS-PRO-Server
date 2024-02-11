@@ -28,7 +28,7 @@ namespace OPSProServer.Contracts.Models
         {
             var ruleResponse = new RuleResponse();
             var playerInfo = game.GetCurrentPlayerGameInformation();
-            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.UserId);
+            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.User.Id);
 
             ruleResponse.Add(playerInfo.GetBoard().Select(x => x.Script.OnStartTurn(playerInfo.User, playerInfo, game)));
             ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnStartTurn(playerInfo.User, opponentInfo, game)));

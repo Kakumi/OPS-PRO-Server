@@ -9,8 +9,8 @@ namespace OPSProServer.Contracts.Models
         public Guid Id { get; }
         public User FromUser { get; }
         public User ToUser { get; }
-        public Guid? FromCardId { get; set; }
-        public Guid? ToCardId { get; set; }
+        public Guid? FromCardId { get; private set; }
+        public Guid? ToCardId { get; private set; }
         public ActionNotifier Action { get; }
         public CanExecuteActionNotifier? CanExecuteAction { get; set; }
         public FlowActionRequest? Request { get; set; }
@@ -94,6 +94,24 @@ namespace OPSProServer.Contracts.Models
             flowAction.NextAction = action;
 
             DeepCopyContext();
+        }
+
+        public void SetFromCardId(Guid? id)
+        {
+            FromCardId = id;
+            if (NextAction != null)
+            {
+                NextAction.SetFromCardId(id);
+            }
+        }
+        
+        public void SetToCardId(Guid? id)
+        {
+            ToCardId = id;
+            if (NextAction != null)
+            {
+                NextAction.SetToCardId(id);
+            }
         }
     }
 }

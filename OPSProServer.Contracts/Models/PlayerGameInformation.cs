@@ -9,8 +9,6 @@ namespace OPSProServer.Contracts.Models
 {
     public class PlayerGameInformation
     {
-        public Guid UserId { get; private set; }
-        public string Username { get; private set; }
         public User User { get; private set; }
         public bool Waiting { get; set; }
         public DeckInfo SelectedDeck { get; private set; }
@@ -52,10 +50,8 @@ namespace OPSProServer.Contracts.Models
         }
 
         [JsonConstructor]
-        public PlayerGameInformation(Guid userId, string username, User user, bool waiting, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard[] characters, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
+        public PlayerGameInformation(User user, bool waiting, DeckInfo selectedDeck, List<PlayingCard> deck, Stack<PlayingCard> lifes, List<PlayingCard> trash, List<PlayingCard> hand, int donDeck, int donAvailable, int donRested, PlayingCard[] characters, PlayingCard? stage, PlayingCard leader, PhaseType currentPhaseType, bool hasRedrawn)
         {
-            UserId = userId;
-            Username = username;
             User = user;
             Waiting = waiting;
             SelectedDeck = selectedDeck;
@@ -79,8 +75,6 @@ namespace OPSProServer.Contracts.Models
         {
             HasRedrawn = false;
 
-            UserId = user.Id;
-            Username = user.Username;
             User = user;
             Waiting = false;
             SelectedDeck = selectedDeck;

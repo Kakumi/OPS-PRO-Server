@@ -28,7 +28,7 @@ namespace OPSProServer.Contracts.Models
             var ruleResponse = new RuleResponse();
 
             var playerInfo = game.GetCurrentPlayerGameInformation();
-            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.UserId);
+            var opponentInfo = game.GetOpponentPlayerInformation(playerInfo.User.Id);
 
             int amount;
             if (game.FirstToPlay == game.PlayerTurn && game.Turn == 1)

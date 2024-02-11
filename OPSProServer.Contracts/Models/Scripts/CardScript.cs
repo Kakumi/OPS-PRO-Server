@@ -177,7 +177,7 @@ namespace OPSProServer.Contracts.Models.Scripts
 
         public bool IsUserAction(User user, PlayerGameInformation gameInfo)
         {
-            return gameInfo.UserId == user.Id;
+            return gameInfo.User.Id == user.Id;
         }
 
         public bool IsSameCard(PlayingCard actionCard, PlayingCard callerCard)

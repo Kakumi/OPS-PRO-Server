@@ -158,8 +158,8 @@ namespace OPSProServer.Hubs
                 var flowAction = new FlowAction(user, user, ResolveAttackable);
                 var flowRequest = new FlowActionRequest(flowAction.Id, user, "GAME_CHOOSE_ATTACK_OPPONENT", cards.Ids().ToList(), 1, 1, true);
                 flowAction.Request = flowRequest;
-                flowAction.FromCardId = attacker;
-                flowAction.ToCardId = null;
+                flowAction.SetFromCardId(attacker);
+                flowAction.SetToCardId(null);
                 flowAction.FinalContext = FlowContext.Attack;
 
                 return await ManageFlowAction(user, room, flowAction);
@@ -339,7 +339,7 @@ namespace OPSProServer.Hubs
                     ruleResponse.Add(contextResponse);
                 }
 
-                while (ruleResponse.FlowAction != null && !ruleResponse.FlowAction.CanExecute(user, room, room.Game))
+                while (ruleResponse.FlowAction == null || !ruleResponse.FlowAction.CanExecute(user, room, room.Game))
                 {
                     RuleResponse? customResponse = await RunFinalContext(flow, ruleResponse.FlowAction, response);
                     if (customResponse != null)
@@ -347,7 +347,10 @@ namespace OPSProServer.Hubs
                         ruleResponse.Add(customResponse);
                     }
 
-                    ruleResponse.FlowAction = ruleResponse.FlowAction.NextAction;
+                    if (ruleResponse.FlowAction != null)
+                    {
+                        ruleResponse.FlowAction = ruleResponse.FlowAction.NextAction;
+                    }
                 }
 
                 return await ManageFlowAction(user, room, ruleResponse);

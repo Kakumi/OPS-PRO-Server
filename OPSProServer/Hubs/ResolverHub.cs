@@ -21,8 +21,8 @@ namespace OPSProServer.Hubs
             var opponent = room.GetOpponent(userAttackerId);
 
             var flowAction = new FlowAction(user, opponent!, ResolveBlocker, CanResolveBlocker);
-            flowAction.FromCardId = attacker;
-            flowAction.ToCardId = target;
+            flowAction.SetFromCardId(attacker);
+            flowAction.SetToCardId(target);
             flowAction.FinalContext = FlowContext.ResolveAttack;
 
             return flowAction;
@@ -60,7 +60,7 @@ namespace OPSProServer.Hubs
                 response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_BLOCKER", args.User.Username, blocker.CardInfo.Name));
                 response.Add(args.Game.OnUseBlocker(args.User, blocker));
 
-                args.FlowAction.ToCardId = blocker.Id;
+                args.FlowAction.SetToCardId(blocker.Id);
             }
 
             return response;
@@ -75,8 +75,8 @@ namespace OPSProServer.Hubs
             var opponent = room.GetOpponent(userAttackerId);
 
             var flowAction = new FlowAction(user, opponent!, ResolveCounter, CanResolveCounter);
-            flowAction.FromCardId = attacker;
-            flowAction.ToCardId = target;
+            flowAction.SetFromCardId(attacker);
+            flowAction.SetToCardId(target);
             flowAction.FinalContext = FlowContext.ResolveAttack;
 
             return flowAction;
@@ -132,8 +132,8 @@ namespace OPSProServer.Hubs
             var opponent = opponentGameInfo.User;
 
             var flowAction = new FlowAction(user, opponent!, ResolveEventCounter, CanResolveEventCounter);
-            flowAction.FromCardId = attacker;
-            flowAction.ToCardId = target;
+            flowAction.SetFromCardId(attacker);
+            flowAction.SetToCardId(target);
             flowAction.FinalContext = FlowContext.ResolveAttack;
 
             return flowAction;

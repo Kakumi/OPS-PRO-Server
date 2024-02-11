@@ -90,7 +90,7 @@ namespace OPSProServer.Contracts.Models
         public RuleResponse? NextPlayer()
         {
             Guid oldPlayerId = PlayerTurn;
-            Guid newPlayerId = GetOpponentPlayerInformation(PlayerTurn).UserId;
+            Guid newPlayerId = GetOpponentPlayerInformation(PlayerTurn).User.Id;
             PlayerTurn = newPlayerId;
             GetCurrentPlayerGameInformation().CurrentPhase!.State = PhaseState.Ending;
 
@@ -101,7 +101,7 @@ namespace OPSProServer.Contracts.Models
 
         public PlayerGameInformation GetCurrentPlayerGameInformation()
         {
-            if (PlayerTurn == CreatorGameInformation.UserId)
+            if (PlayerTurn == CreatorGameInformation.User.Id)
             {
                 return CreatorGameInformation;
             }
@@ -111,7 +111,7 @@ namespace OPSProServer.Contracts.Models
 
         public PlayerGameInformation GetMyPlayerInformation(Guid userId)
         {
-            if (userId == CreatorGameInformation.UserId)
+            if (userId == CreatorGameInformation.User.Id)
             {
                 return CreatorGameInformation;
             }
@@ -121,7 +121,7 @@ namespace OPSProServer.Contracts.Models
 
         public PlayerGameInformation GetOpponentPlayerInformation(Guid userId)
         {
-            if (userId == CreatorGameInformation.UserId)
+            if (userId == CreatorGameInformation.User.Id)
             {
                 return OpponentGameInformation;
             }
@@ -383,7 +383,7 @@ namespace OPSProServer.Contracts.Models
                                 var flowAction = new FlowAction(user, opponent, UseOrAddLifeCard);
                                 var flowRequest = new FlowActionRequest(flowAction.Id, opponent, "GAME_ASK_LIFECARD", new List<Guid>() { lifeCard.Id }, 0, 1, true);
                                 flowAction.Request = flowRequest;
-                                flowAction.FromCardId = lifeCard.Id;
+                                flowAction.SetFromCardId(lifeCard.Id);
                             } else
                             {
                                 response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD", lifeCard.CardInfo.Name));
@@ -402,7 +402,7 @@ namespace OPSProServer.Contracts.Models
                     }
                 } else
                 {
-                    response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_FAILED", myGameInfo.Username, opponentGameInfo.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackerCard.GetTotalPower().ToString(), defenderCard.GetTotalPower().ToString()));
+                    response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_FAILED", myGameInfo.User.Username, opponentGameInfo.User.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackerCard.GetTotalPower().ToString(), defenderCard.GetTotalPower().ToString()));
                 }
 
                 attackerCard.RemoveStatDuration(ModifierDuration.Attack);
@@ -420,6 +420,7 @@ namespace OPSProServer.Contracts.Models
 
         private RuleResponse UseOrAddLifeCard(FlowArgs args)
         {
+            return new RuleResponse();
             return args.Room.Game!.UseCounters(args.User, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
         }
 
