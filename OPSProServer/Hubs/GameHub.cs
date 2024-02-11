@@ -188,23 +188,10 @@ namespace OPSProServer.Hubs
                 var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
                 if (attackerCard != null && defenderCard != null)
                 {
-                    var blockerFlow = PrepareAttackCheckOpponentBlockers(user.Id, attacker, target);
-                    if (blockerFlow != null)
-                    {
-                        return await ManageFlowAction(user, room, blockerFlow);
-                    }
+                    var attackFlow = PrepareAttackCheckOpponentBlockers(user.Id, attacker, target);
+                    attackFlow.AddLast(PrepareAttackCheckOpponentCounters(user.Id, attacker, target));
 
-                    var counterFlow = PrepareAttackCheckOpponentCounters(user.Id, attacker, target);
-                    if (counterFlow != null)
-                    {
-                        return await ManageFlowAction(user, room, counterFlow);
-                    }
-
-                    var nextAction = await ResolveAttack(user.Id, attacker, target);
-                    if (nextAction != null)
-                    {
-                        return await ManageFlowAction(user, room, nextAction);
-                    }
+                    return await ManageFlowAction(user, room, attackFlow);
                 }
             }
 
@@ -266,16 +253,39 @@ namespace OPSProServer.Hubs
 
         private async Task<bool> ManageFlowAction(User user, Room room, FlowAction action)
         {
-            var opponent = room.GetOpponent(action.Request!.UserTarget);
-            if (room.Game!.PlayerTurn == opponent!.Id)
+            if (action.CanExecute(user, room, room.Game!))
             {
-                var opponentGameInfo = room.Game.GetOpponentPlayerInformation(action.Request!.UserTarget.Id);
-                opponentGameInfo.Waiting = true;
-                await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+                var opponent = room.GetOpponent(action.Request!.UserTarget);
+                if (room.Game!.PlayerTurn == opponent!.Id)
+                {
+                    var opponentGameInfo = room.Game.GetOpponentPlayerInformation(action.Request!.UserTarget.Id);
+                    opponentGameInfo.Waiting = true;
+                    await Clients.Client(opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), opponentGameInfo.Waiting);
+                }
+
+                _resolverManager.Add(action);
+                await Clients.Client(action.Request!.UserTarget.ConnectionId).SendAsync(nameof(IGameHubEvent.FlowActionRequest), action.Request!);
+                return true;
             }
 
-            _resolverManager.Add(action);
-            await Clients.Client(action.Request!.UserTarget.ConnectionId).SendAsync(nameof(IGameHubEvent.FlowActionRequest), action.Request!);
+            FlowAction? customNextFlow = await RunFinalContext(action, action.NextAction, null);
+            if (customNextFlow != null)
+            {
+                if (action.NextAction == null)
+                {
+                    action.AddFirst(customNextFlow);
+                }
+                else
+                {
+                    action.AddLast(customNextFlow);
+                }
+            }
+
+
+            if (action.NextAction != null)
+            {
+                return await ManageFlowAction(user, room, action.NextAction);
+            }
 
             return true;
         }
@@ -315,39 +325,35 @@ namespace OPSProServer.Hubs
                     ruleResponse.FlowAction = nextFlow;
                 }
 
-                if (ruleResponse.FlowAction == null || ruleResponse.FlowAction.FinalContext != flow.FinalContext)
+                FlowAction? contextNextFlow = await RunFinalContext(flow, ruleResponse.FlowAction, response);
+
+                while (ruleResponse.FlowAction != null && !ruleResponse.FlowAction.CanExecute(user, room, room.Game))
                 {
-                    FlowAction? customNextFlow = null;
-                    switch (flow.FinalContext)
-                    {
-                        case FlowContext.None:
-                            break;
-                        case FlowContext.Attack:
-                            if (response.CardsId.Count > 0 && flow.FromCardId != null)
-                            {
-                                await Attack(flow.FromCardId!.Value, response.CardsId.First());
-                            }
-
-                            break;
-                        case FlowContext.ResolveAttack:
-                            if (flow.FromCardId != null && flow.ToCardId != null)
-                            {
-                                customNextFlow = await ResolveAttack(flow.FromUser.Id, flow.FromCardId!.Value,  flow.ToCardId!.Value);
-                            }
-
-                            break;
-                    }
-
+                    FlowAction? customNextFlow = await RunFinalContext(flow, ruleResponse.FlowAction, response);
                     if (customNextFlow != null)
                     {
-                        if (ruleResponse.FlowAction == null)
+                        if (contextNextFlow == null)
                         {
-                            ruleResponse.FlowAction = customNextFlow;
+                            contextNextFlow = customNextFlow;
                         }
                         else
                         {
-                            ruleResponse.FlowAction.AddLast(customNextFlow);
+                            contextNextFlow.AddLast(customNextFlow);
                         }
+                    }
+
+                    ruleResponse.FlowAction = ruleResponse.FlowAction.NextAction;
+                }
+
+                if (contextNextFlow != null)
+                {
+                    if (ruleResponse.FlowAction == null)
+                    {
+                        ruleResponse.FlowAction = contextNextFlow;
+                    }
+                    else
+                    {
+                        ruleResponse.FlowAction.AddLast(contextNextFlow);
                     }
                 }
 
@@ -370,6 +376,37 @@ namespace OPSProServer.Hubs
                     await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), message.UserGameMessage);
                 }
             }
+        }
+
+        private async Task<FlowAction?> RunFinalContext(FlowAction currentAction, FlowAction? nextAction, FlowActionResponse? response)
+        {
+            if (nextAction == null || nextAction.FinalContext != currentAction.FinalContext)
+            {
+                FlowAction? customNextFlow = null;
+                switch (currentAction.FinalContext)
+                {
+                    case FlowContext.None:
+                        break;
+                    case FlowContext.Attack:
+                        if (response != null && response.CardsId.Count > 0 && currentAction.FromCardId != null)
+                        {
+                            await Attack(currentAction.FromCardId!.Value, response.CardsId.First());
+                        }
+
+                        break;
+                    case FlowContext.ResolveAttack:
+                        if (currentAction.FromCardId != null && currentAction.ToCardId != null)
+                        {
+                            customNextFlow = await ResolveAttack(currentAction.FromUser.Id, currentAction.FromCardId!.Value, currentAction.ToCardId!.Value);
+                        }
+
+                        break;
+                }
+
+                return customNextFlow;
+            }
+
+            return null;
         }
     }
 }

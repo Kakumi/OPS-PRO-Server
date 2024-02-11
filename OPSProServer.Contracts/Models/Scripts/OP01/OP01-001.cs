@@ -36,6 +36,7 @@ namespace OPSProServer.Contracts.Models.Scripts.OP01
         public override RuleResponse OnPhaseBegin(User user, PlayerGameInformation gameInfo, Game game, PhaseType phaseType)
         {
             var response = new RuleResponse();
+            return response;
 
             if (IsUserAction(user, gameInfo))
             {

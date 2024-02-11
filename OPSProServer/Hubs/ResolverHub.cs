@@ -4,33 +4,41 @@ using OPSProServer.Contracts.Events;
 using OPSProServer.Contracts.Hubs;
 using OPSProServer.Contracts.Models;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics.Metrics;
 
 namespace OPSProServer.Hubs
 {
     public partial class GameHub : Hub, IResolverHub
     {
-        private FlowAction? PrepareAttackCheckOpponentBlockers(Guid userAttackerId, Guid attacker, Guid target)
+        private FlowAction PrepareAttackCheckOpponentBlockers(Guid userAttackerId, Guid attacker, Guid target)
         {
             User user = _userManager.GetUser(userAttackerId)!;
             Room room = _roomManager.GetRoom(user)!;
-            var blockers = room.Game!.GetBlockerCards(room.Opponent!);
+
+            var myGameInfo = room.Game!.GetMyPlayerInformation(userAttackerId);
+            var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userAttackerId);
+            var opponent = room.GetOpponent(userAttackerId);
+
+            var flowAction = new FlowAction(user, opponent!, ResolveBlocker, CanResolveBlocker);
+            flowAction.FromCardId = attacker;
+            flowAction.ToCardId = target;
+            flowAction.FinalContext = FlowContext.ResolveAttack;
+
+            return flowAction;
+        }
+
+        private bool CanResolveBlocker(User user, Room room, Game game, FlowAction action)
+        {
+            var blockers = room.Game!.GetBlockerCards(action.ToUser);
             if (blockers.Count > 0)
             {
-                var myGameInfo = room.Game!.GetMyPlayerInformation(userAttackerId);
-                var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userAttackerId);
-                var opponent = room.GetOpponent(userAttackerId);
+                action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_BLOCKER", blockers.Ids().ToList(), 1, 1, true);
 
-                var flowAction = new FlowAction(user, opponent!, ResolveBlocker);
-                var flowRequest = new FlowActionRequest(flowAction.Id, opponent!, "GAME_ASK_BLOCKER", blockers.Ids().ToList(), 1, 1, true);
-                flowAction.Request = flowRequest;
-                flowAction.FromCardId = attacker;
-                flowAction.ToCardId = target;
-                flowAction.FinalContext = FlowContext.ResolveAttack;
-
-                return flowAction;
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         private RuleResponse ResolveBlocker(FlowArgs args)
@@ -56,28 +64,33 @@ namespace OPSProServer.Hubs
             return response;
         }
 
-        private FlowAction? PrepareAttackCheckOpponentCounters(Guid userAttackerId, Guid attacker, Guid target)
+        private FlowAction PrepareAttackCheckOpponentCounters(Guid userAttackerId, Guid attacker, Guid target)
         {
             User user = _userManager.GetUser(userAttackerId)!;
             Room room = _roomManager.GetRoom(user)!;
             var myGameInfo = room.Game!.GetMyPlayerInformation(userAttackerId);
             var opponentGameInfo = room.Game!.GetOpponentPlayerInformation(userAttackerId);
             var opponent = room.GetOpponent(userAttackerId);
-            var counters = room.Game.GetCounterCards(opponent!);
 
+            var flowAction = new FlowAction(user, opponent!, ResolveCounter, CanResolveCounter);
+            flowAction.FromCardId = attacker;
+            flowAction.ToCardId = target;
+            flowAction.FinalContext = FlowContext.ResolveAttack;
+
+            return flowAction;
+        }
+
+        private bool CanResolveCounter(User user, Room room, Game game, FlowAction action)
+        {
+            var counters = game.GetCounterCards(action.ToUser);
             if (counters.Count > 0)
             {
-                var flowAction = new FlowAction(user, opponent!, ResolveCounter);
-                var flowRequest = new FlowActionRequest(flowAction.Id, opponent!, "GAME_ASK_COUNTER", counters.Ids().ToList(), 1, 99, true);
-                flowAction.Request = flowRequest;
-                flowAction.FromCardId = attacker;
-                flowAction.ToCardId = target;
-                flowAction.FinalContext = FlowContext.ResolveAttack;
-
-                return flowAction;
+                action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_COUNTER", counters.Ids().ToList(), 1, 99, true);
+                
+                return true;
             }
 
-            return null;
+            return false;
         }
 
         private RuleResponse ResolveCounter(FlowArgs args)
@@ -88,7 +101,6 @@ namespace OPSProServer.Hubs
         private async Task<FlowAction?> ResolveAttack(Guid userId, Guid attacker, Guid defender)
         {
             var response = new RuleResponse();
-            //TODO Ne pas retourner une exception mais un Result erreur avec le message ?
             User user = _userManager.GetUser(userId)!;
             Room room = _roomManager.GetRoom(user)!;
             var result = room.Game!.Attack(user, room.GetOpponent(userId)!, attacker, defender);

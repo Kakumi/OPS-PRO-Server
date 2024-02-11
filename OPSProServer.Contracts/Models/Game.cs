@@ -92,6 +92,7 @@ namespace OPSProServer.Contracts.Models
             Guid oldPlayerId = PlayerTurn;
             Guid newPlayerId = GetOpponentPlayerInformation(PlayerTurn).UserId;
             PlayerTurn = newPlayerId;
+            GetCurrentPlayerGameInformation().CurrentPhase!.State = PhaseState.Ending;
 
             PlayerChanged?.Invoke(this, new PlayerChangedArgs(oldPlayerId, newPlayerId, this));
 
