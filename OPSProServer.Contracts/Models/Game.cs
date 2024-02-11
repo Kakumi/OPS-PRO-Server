@@ -190,6 +190,12 @@ namespace OPSProServer.Contracts.Models
             return gameInfo.GetCharacters().Where(x => x.IsBlocker(user, this)).ToList();
         }
 
+        public List<PlayingCard> GetEventCounterCards(User toUser)
+        {
+            var gameInfo = GetMyPlayerInformation(toUser.Id);
+            return gameInfo.GetCharacters().Where(x => x.CardInfo.IsEventCounter).ToList();
+        }
+
         public Result CanSummon(User user, Guid cardId)
         {
             var errors = new List<OPSException>();
@@ -298,6 +304,38 @@ namespace OPSProServer.Contracts.Models
 
                     response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Counter.ToString()));
                     card.PowerModifier.Add(new ValueModifier(ModifierDuration.Battle, cardToUse.GetTotalCounter()));
+                }
+            }
+
+            return response;
+        }
+
+        public RuleResponse UseEventCounters(User user, List<Guid> cardsId)
+        {
+            var response = new RuleResponse();
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var counters = GetEventCounterCards(user);
+            var cardsToUse = counters.Where(x => cardsId.Contains(x.Id)).ToList();
+
+            foreach (var cardToUse in cardsToUse)
+            {
+                if (cardToUse.GetTotalCost() <= gameInfo.DonAvailable)
+                {
+                    var removed = gameInfo.RemoveFromHand(cardToUse.Id);
+                    if (removed != null)
+                    {
+                        gameInfo.UseDonCard(cardToUse.GetTotalCost());
+                        response.Add(OnCost(user, cardToUse));
+
+                        response.Add(OnEventCounter(user, removed));
+                        gameInfo.TrashCard(removed);
+                        response.Add(OnTrash(user, removed));
+
+                        response.FlowResponses.Add(new FlowResponseMessage("GAME_USE_EVENT_COUNTER", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Cost.ToString()));
+                    }
+                } else
+                {
+                    response.FlowResponses.Add(new FlowResponseMessage(user, "GAME_USE_EVENT_COUNTER_NO_DON", user.Username, cardToUse.CardInfo.Name, cardToUse.CardInfo.Cost.ToString(), gameInfo.DonAvailable.ToString()));
                 }
             }
 
@@ -426,6 +464,18 @@ namespace OPSProServer.Contracts.Models
             return ruleResponse;
         }
 
+        public RuleResponse OnEventCounter(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnActivateCounterEvent(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnActivateCounterEvent(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
         public RuleResponse OnPlay(User user, PlayingCard card)
         {
             var gameInfo = GetMyPlayerInformation(user.Id);
@@ -460,9 +510,9 @@ namespace OPSProServer.Contracts.Models
             var opponentInfo = GetOpponentPlayerInformation(user.Id);
 
             ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnGiveDon(user, gameInfo, this, x, card)));
-            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, gameInfo, this)));
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, gameInfo, this, 1)));
             ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnGiveDon(user, opponentInfo, this, x, card)));
-            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, opponentInfo, this)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, opponentInfo, this, 1)));
 
             return ruleResponse;
         }
@@ -517,6 +567,21 @@ namespace OPSProServer.Contracts.Models
 
             ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnBlock(user, gameInfo, this, x, card)));
             ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnBlock(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnCost(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, gameInfo, this, card.GetTotalCost())));
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnCost(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, opponentInfo, this, card.GetTotalCost())));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnCost(user, opponentInfo, this, x, card)));
 
             return ruleResponse;
         }

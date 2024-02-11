@@ -33,7 +33,15 @@ namespace OPSProServer.Hubs
             var blockers = room.Game!.GetBlockerCards(action.ToUser);
             if (blockers.Count > 0)
             {
-                action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_BLOCKER", blockers.Ids().ToList(), 1, 1, true);
+                var gameInfo = game.GetMyPlayerInformation(action.FromUser.Id);
+                var opponentGameInfo = game.GetMyPlayerInformation(action.ToUser.Id);
+                var attacker = gameInfo.GetCard(action.FromCardId!.Value);
+                var defender = opponentGameInfo.GetCard(action.ToCardId!.Value);
+
+                if (attacker != null && defender != null)
+                {
+                    action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_BLOCKER", blockers.Ids().ToList(), 1, 1, true, attacker.CardInfo.Name, attacker.GetTotalPower().ToString(), defender.CardInfo.Name, defender.GetTotalPower().ToString());
+                }
 
                 return true;
             }
@@ -79,8 +87,16 @@ namespace OPSProServer.Hubs
             var counters = game.GetCounterCards(action.ToUser);
             if (counters.Count > 0)
             {
-                action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_COUNTER", counters.Ids().ToList(), 1, 99, true);
-                
+                var gameInfo = game.GetMyPlayerInformation(action.FromUser.Id);
+                var opponentGameInfo = game.GetMyPlayerInformation(action.ToUser.Id);
+                var attacker = gameInfo.GetCard(action.FromCardId!.Value);
+                var defender = opponentGameInfo.GetCard(action.ToCardId!.Value);
+
+                if (attacker != null && defender != null)
+                {
+                    action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_COUNTER", counters.Ids().ToList(), 1, 99, true, attacker.CardInfo.Name, attacker.GetTotalPower().ToString(), defender.CardInfo.Name, defender.GetTotalPower().ToString());
+                }
+
                 return true;
             }
 
@@ -105,6 +121,42 @@ namespace OPSProServer.Hubs
             }
 
             return response;
+        }
+
+        private FlowAction PrepareAttackEventCounter(Guid callerId, Guid attacker, Guid target)
+        {
+            User user = _userManager.GetUser(callerId)!;
+            Room room = _roomManager.GetRoom(user)!;
+            var myGameInfo = room.Game!.GetMyPlayerInformation(callerId);
+            var opponentGameInfo = room.Game!.GetMyPlayerInformation(room.Opponent!.Id);
+            var opponent = opponentGameInfo.User;
+
+            var flowAction = new FlowAction(user, opponent!, ResolveEventCounter, CanResolveEventCounter);
+            flowAction.FromCardId = attacker;
+            flowAction.ToCardId = target;
+            flowAction.FinalContext = FlowContext.ResolveAttack;
+
+            return flowAction;
+        }
+
+        private bool CanResolveEventCounter(User user, Room room, Game game, FlowAction action)
+        {
+            var eventCounters = game.GetEventCounterCards(action.ToUser);
+            var gameInfo = game.GetMyPlayerInformation(action.ToUser.Id);
+            var availableEventCounters = eventCounters.Where(x => x.GetTotalCost() <= gameInfo.DonAvailable).ToList();
+            if (availableEventCounters.Count > 0)
+            {
+                action.Request = new FlowActionRequest(action.Id, action.ToUser, "GAME_ASK_EVENT_COUNTER_ATTACK", availableEventCounters.Ids().ToList(), 0, 99, true, action.FromUser.Username);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private RuleResponse ResolveEventCounter(FlowArgs args)
+        {
+            return args.Room.Game!.UseEventCounters(args.User, args.Response.CardsId);
         }
     }
 }

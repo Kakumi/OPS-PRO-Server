@@ -9,6 +9,7 @@ namespace OPSProServer.Contracts.Models
         public Guid FlowActionId { get; }
         public User UserTarget { get; }
         public string CodeMessage { get; }
+        public string[] Args { get; }
         public List<Guid> CardsId { get; }
         public FlowActionType Type { get; }
         public int MinSelection { get; }
@@ -16,11 +17,12 @@ namespace OPSProServer.Contracts.Models
         public bool Cancellable { get; }
 
         [JsonConstructor]
-        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, List<Guid> cardsId, FlowActionType type, int minSelection, int maxSelection, bool cancellable)
+        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, string[] args, List<Guid> cardsId, FlowActionType type, int minSelection, int maxSelection, bool cancellable)
         {
             FlowActionId = flowActionId;
             UserTarget = userTarget;
             CodeMessage = codeMessage;
+            Args = args;
             CardsId = cardsId;
             Type = type;
             MinSelection = minSelection;
@@ -28,23 +30,25 @@ namespace OPSProServer.Contracts.Models
             Cancellable = cancellable;
         }
 
-        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, List<Guid> cardsId, int minSelection, int maxSelection, bool cancellable)
+        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, List<Guid> cardsId, int minSelection, int maxSelection, bool cancellable, params string[] args)
         {
             FlowActionId = flowActionId;
             UserTarget = userTarget;
             CodeMessage = codeMessage;
             CardsId = cardsId;
+            Args = args;
             MinSelection = minSelection;
             MaxSelection = maxSelection;
             Cancellable = cancellable;
             Type = FlowActionType.Selection;
         }
 
-        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, bool cancellable)
+        public FlowActionRequest(Guid flowActionId, User userTarget, string codeMessage, bool cancellable, params string[] args)
         {
             FlowActionId = flowActionId;
             UserTarget = userTarget;
             CodeMessage = codeMessage;
+            Args = args;
             CardsId = new List<Guid>();
             MinSelection = 0;
             MaxSelection = 0;

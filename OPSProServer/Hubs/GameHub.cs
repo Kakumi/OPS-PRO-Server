@@ -188,8 +188,11 @@ namespace OPSProServer.Hubs
                 var defenderCard = opponentGameInfo.GetCharacterOrLeader(target);
                 if (attackerCard != null && defenderCard != null)
                 {
-                    var attackFlow = PrepareAttackCheckOpponentBlockers(user.Id, attacker, target);
+                    var attackFlow = PrepareAttackEventCounter(user.Id, attacker, target);
+                    attackFlow.AddLast(PrepareAttackCheckOpponentBlockers(user.Id, attacker, target));
+                    attackFlow.AddLast(PrepareAttackEventCounter(user.Id, attacker, target));
                     attackFlow.AddLast(PrepareAttackCheckOpponentCounters(user.Id, attacker, target));
+                    attackFlow.AddLast(PrepareAttackEventCounter(user.Id, attacker, target));
 
                     return await ManageFlowAction(user, room, attackFlow);
                 }
@@ -353,6 +356,8 @@ namespace OPSProServer.Hubs
             return false;
         }
 
+        //TODO Ajouter event counter dans l'attaque
+        //TODO permettre de définir pourquoi utiliser un event counter (attaque, invocation, ...)
         private async Task SendFlowMessage(Room room, FlowResponseMessage? message)
         {
             if (message != null)

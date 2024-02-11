@@ -80,7 +80,12 @@ namespace OPSProServer.Contracts.Models.Scripts
             return new RuleResponse();
         }
 
-        public virtual RuleResponse OnDonUsed(User user, PlayerGameInformation gameInfo, Game game)
+        public virtual RuleResponse OnDonUsed(User user, PlayerGameInformation gameInfo, Game game, int amount)
+        {
+            return new RuleResponse();
+        }
+
+        public virtual RuleResponse OnCost(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
         {
             return new RuleResponse();
         }
