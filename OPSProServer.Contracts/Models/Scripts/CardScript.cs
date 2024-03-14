@@ -50,6 +50,11 @@ namespace OPSProServer.Contracts.Models.Scripts
             return new RuleResponse();
         }
 
+        public virtual RuleResponse OnActivateEvent(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
+        {
+            return new RuleResponse();
+        }
+
         public virtual RuleResponse OnActivateTrigger(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
         {
             return new RuleResponse();
@@ -120,11 +125,6 @@ namespace OPSProServer.Contracts.Models.Scripts
             return new RuleResponse();
         }
 
-        public virtual RuleResponse OnEvent(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
-        {
-            return new RuleResponse();
-        }
-
         public virtual RuleResponse OnGetLifeCard(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
         {
             return new RuleResponse();
@@ -166,11 +166,6 @@ namespace OPSProServer.Contracts.Models.Scripts
         }
 
         public virtual RuleResponse OnTrash(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
-        {
-            return new RuleResponse();
-        }
-
-        public virtual RuleResponse OnTrigger(User user, PlayerGameInformation gameInfo, Game game, PlayingCard callerCard, PlayingCard actionCard)
         {
             return new RuleResponse();
         }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.Metrics;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -358,6 +359,7 @@ namespace OPSProServer.Contracts.Models
                 response.Add(OnAttack(user, defenderCard));
 
                 attackerCard.Rested = true;
+                response.Add(OnRest(user, attackerCard));
 
                 PlayingCard? lifeCard = null;
                 bool winner = false;
@@ -367,38 +369,41 @@ namespace OPSProServer.Contracts.Models
                     response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_ATTACK_SUCCESS", user.Username, opponent.Username, attackerCard.CardInfo.Name, defenderCard.CardInfo.Name, attackTotalPower.ToString(), defenseTotalPower.ToString()));
                     success = true;
 
-                    if (defenderCard.Rested)
+                    if (defenderCard.CardInfo.CardCategory == CardCategory.LEADER)
+                    {
+                        var numberOfAttacks = attackerCard.Script.IsDoubleAttack(user, myGameInfo, this, attackerCard) ? 2 : 1;
+                        for(int i = 0; i < numberOfAttacks && !winner; i++)
+                        {
+                            if (opponentGameInfo.Lifes.Count > 0)
+                            {
+                                lifeCard = opponentGameInfo.RemoveLifeCard();
+                                opponentGameInfo.AddHandCard(lifeCard);
+                                if (lifeCard.CardInfo.IsTrigger)
+                                {
+                                    var flowAction = new FlowAction(user, opponent, UseOrAddLifeCard);
+                                    var flowRequest = new FlowActionRequest(flowAction.Id, opponent, "GAME_ASK_LIFECARD", new List<Guid>() { lifeCard.Id }, 0, 1, true);
+                                    flowAction.Request = flowRequest;
+                                    flowAction.SetFromCardId(lifeCard.Id);
+                                }
+                                else
+                                {
+                                    response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD", lifeCard.CardInfo.Name));
+                                    response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD_ATTACKER", opponent.Username));
+                                    response.Add(OnAddLifeCardToHand(opponent, lifeCard));
+                                }
+
+                                response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_LOOSE_LIFE", opponent.Username, opponentGameInfo.Lifes.Count().ToString()));
+                            }
+                            else
+                            {
+                                response.Winner = user;
+                                winner = true;
+                            }
+                        }
+                    } else if (defenderCard.Rested)
                     {
                         opponentGameInfo.KillCharacter(target);
                         response.Add(OnKO(opponent, defenderCard));
-                    }
-
-                    if (defenderCard.CardInfo.CardCategory == CardCategory.LEADER)
-                    {
-                        if (opponentGameInfo.Lifes.Count > 0)
-                        {
-                            lifeCard = opponentGameInfo.RemoveLifeCard();
-                            if (lifeCard.CardInfo.IsTrigger)
-                            {
-                                var flowAction = new FlowAction(user, opponent, UseOrAddLifeCard);
-                                var flowRequest = new FlowActionRequest(flowAction.Id, opponent, "GAME_ASK_LIFECARD", new List<Guid>() { lifeCard.Id }, 0, 1, true);
-                                flowAction.Request = flowRequest;
-                                flowAction.SetFromCardId(lifeCard.Id);
-                            } else
-                            {
-                                response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD", lifeCard.CardInfo.Name));
-                                response.FlowResponses.Add(new FlowResponseMessage("GAME_GET_LIFE_CARD_ATTACKER", opponent.Username));
-                                opponentGameInfo.AddHandCard(lifeCard);
-                                response.Add(OnAddLifeCardToHand(opponent, lifeCard));
-                            }
-
-                            response.FlowResponses.Add(new FlowResponseMessage("GAME_PLAYER_LOOSE_LIFE", opponent.Username, opponentGameInfo.Lifes.Count().ToString()));
-                        }
-                        else
-                        {
-                            response.Winner = user;
-                            winner = true;
-                        }
                     }
                 } else
                 {
@@ -420,8 +425,19 @@ namespace OPSProServer.Contracts.Models
 
         private RuleResponse UseOrAddLifeCard(FlowArgs args)
         {
+            if (args.Response.CardsId.Count > 0)
+            {
+                var gameInfo = GetMyPlayerInformation(args.User.Id);
+                var card = gameInfo.Hand.FirstOrDefault(x => x.Id.Equals(args.Response.CardsId.First()));
+                if (card == null)
+                {
+                    throw new ErrorUserActionException(args.User.Id, "GAME_CARD_NOT_FOUND");
+                }
+
+                return OnActivateTrigger(args.User, card);
+            }
+
             return new RuleResponse();
-            return args.Room.Game!.UseCounters(args.User, args.FlowAction.ToCardId!.Value, args.Response.CardsId);
         }
 
         public RuleResponse GiveDon(User user, Guid cardId)
@@ -583,6 +599,32 @@ namespace OPSProServer.Contracts.Models
             ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnCost(user, gameInfo, this, x, card)));
             ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnDonUsed(user, opponentInfo, this, card.GetTotalCost())));
             ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnCost(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnRest(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnRest(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnRest(user, opponentInfo, this, x, card)));
+
+            return ruleResponse;
+        }
+
+        public RuleResponse OnActivateTrigger(User user, PlayingCard card)
+        {
+            var ruleResponse = new RuleResponse();
+
+            var gameInfo = GetMyPlayerInformation(user.Id);
+            var opponentInfo = GetOpponentPlayerInformation(user.Id);
+
+            ruleResponse.Add(gameInfo.GetBoard().Select(x => x.Script.OnActivateTrigger(user, gameInfo, this, x, card)));
+            ruleResponse.Add(opponentInfo.GetBoard().Select(x => x.Script.OnActivateTrigger(user, opponentInfo, this, x, card)));
 
             return ruleResponse;
         }
