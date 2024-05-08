@@ -1,16 +1,23 @@
-﻿using OPSProServer.Contracts.Contracts;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using OPSProServer.Contracts.Models;
 
 namespace OPSProServer.Contracts.Events
 {
     public interface IRoomHubEvent
     {
-        Room RoomUpdated();
+        /// <summary>
+        /// Event when a room is updated (ready, join, left)
+        /// </summary>
+        /// <returns></returns>
+        SecureRoom RoomUpdated();
+
+        /// <summary>
+        /// Event when a room is deleted
+        /// </summary>
         void RoomDeleted();
+
+        /// <summary>
+        /// Event when a user is kick from the room
+        /// </summary>
         void RoomExcluded();
     }
 }
