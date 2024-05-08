@@ -59,4 +59,4 @@ The advantage of developing on this server with a public source code is that sev
 At the moment, there's no documentation on the development, but if it's necessary I could write it progressively if I see that it's of interest to several people.
 
 # <a name=“license”></a>Licence
-OPS Pro Server can be used by anyone for any purpose allowed by the permissive MIT License. Be sure to check Godot Licence too.
+OPS Pro Server can be used by anyone for any purpose allowed by the permissive MIT License.
