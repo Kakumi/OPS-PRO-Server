@@ -9,14 +9,6 @@
     }
   },
   "profiles": {
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
     "Run Dev": {
       "commandName": "Project",
       "launchBrowser": false,
@@ -24,7 +16,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:5281;http://localhost:5282;http://26.80.66.111:5000",
+      "applicationUrl": "https://localhost:5281;http://localhost:5282",
       "dotnetRunMessages": true
     },
     "Run Prod": {

@@ -73,8 +73,6 @@ namespace OPSProServer.Contracts.Models
 
         public PlayerGameInformation(User user, DeckInfo selectedDeck, IPhase phase)
         {
-            HasRedrawn = false;
-
             User = user;
             Waiting = false;
             SelectedDeck = selectedDeck;
@@ -88,6 +86,7 @@ namespace OPSProServer.Contracts.Models
             Characters = new PlayingCard[5];
             Stage = null;
             CurrentPhase = phase;
+            HasRedrawn = false;
 
             var leaderCard = selectedDeck.GetLeader();
 
@@ -121,7 +120,12 @@ namespace OPSProServer.Contracts.Models
             if (!HasRedrawn)
             {
                 HasRedrawn = true;
-                Initialize(SelectedDeck);
+                Deck.AddRange(Hand);
+                Hand = new List<PlayingCard>();
+
+                ShuffleDeck();
+
+                DrawCard(5);
             }
         }
 

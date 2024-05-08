@@ -27,6 +27,15 @@ namespace OPSProServer.Contracts.Hubs
         Task<bool> SetRockPaperScissors(RPSChoice rps);
 
         /// <summary>
+        /// <para>Set if player want a new hand or not</para>
+        /// <para>When both player send the response, <see cref="IGameHubEvent.WaitOpponent"/> is send with false</para>
+        /// <para>Else, <see cref="IGameHubEvent.WaitOpponent"/> is send with true</para>
+        /// </summary>
+        /// <param name="redraw"></param>
+        /// <returns></returns>
+        Task<bool> Redraw(bool redraw);
+
+        /// <summary>
         /// <para>Tell the server that the game should start.</para>
         /// <para>This method will fire <see cref="IGameHubEvent.GameStarted"/>.</para>
         /// <para>This method will fire <see cref="IGameHubEvent.BoardUpdated"/>.</para>

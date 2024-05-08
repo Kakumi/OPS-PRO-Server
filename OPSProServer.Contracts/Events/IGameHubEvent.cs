@@ -24,6 +24,11 @@ namespace OPSProServer.Contracts.Events
         void ChooseFirstPlayerToPlay();
 
         /// <summary>
+        /// Event when the player has a proposal to change his starting hand
+        /// </summary>
+        void AskRedrawStartingHand();
+
+        /// <summary>
         /// Event when the game start
         /// </summary>
         /// <returns></returns>

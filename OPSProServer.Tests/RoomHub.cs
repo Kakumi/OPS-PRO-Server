@@ -26,7 +26,6 @@ namespace OPSProServer.Tests
         private IRoomManager _roomManager;
         private IFlowManager _resolverManager;
         private ICardService _cardService;
-        private IGameRuleService _gameRuleEngine;
         private GameHub _roomHub;
         private GameHub _roomHub2;
         private GameHub _roomHub3;
@@ -45,7 +44,6 @@ namespace OPSProServer.Tests
             var request = new Mock<IRequest>();
             var mockClients = new Mock<IHubCallerClients>();
             var mockGroupManager = new Mock<IGroupManager>();
-            var mockRuleEngine = new Mock<IGameRuleService>();
             var mockHubCallerContext = new Mock<HubCallerContext>();
             mockHubCallerContext.SetupGet(c => c.ConnectionId).Returns("unit_test");
             mockHubCallerContext.SetupGet(c => c.UserIdentifier).Returns("unit_test");
@@ -63,10 +61,9 @@ namespace OPSProServer.Tests
             _resolverManager = new FlowManager();
             IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
             _cardService = new CardService(mockCardServiceLogger.Object, options);
-            _gameRuleEngine = new GameRuleService(_cardService);
-            _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
-            _roomHub2 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
-            _roomHub3 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine);
+            _roomHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager);
+            _roomHub2 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager);
+            _roomHub3 = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager);
             AssignToHubRequiredProperties(_roomHub);
             AssignToHubRequiredProperties(_roomHub2);
             AssignToHubRequiredProperties(_roomHub3);
@@ -83,11 +80,11 @@ namespace OPSProServer.Tests
             _userManager.AddUser(_user2);
             _userManager.AddUser(_user3);
 
-            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
+            _leaderCard = new CardInfo("leader", new List<string>(), "OP01-001", "L", "LEADER", "Zoro", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false, false, false, false, false, false, false);
             var cards = new List<CardInfo>();
             for(int i = 0;  i < 50; i++)
             {
-                var card = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false);
+                var card = new CardInfo(Guid.NewGuid().ToString(), new List<string>(), "OP01-002", "R", "CHARACTER", "Luffy", 5, null, "STRIKE", 5000, 0, new List<string>() { "RED" }, new List<string>() { "Mugiwara" }, new List<string>(), "Test", false, false, false, false, false, false, false, false, false, false, false);
                 cards.Add(card);
             }
 

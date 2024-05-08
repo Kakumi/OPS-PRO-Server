@@ -119,11 +119,55 @@ namespace OPSProServer.Hubs
                 await Clients.Client(room.Opponent.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", user.Username));
                 await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_VERSUS_START", room.Opponent.Username));
                 await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_USER_START", userStart.Username));
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.AskRedrawStartingHand));
 
                 return await ManageFlowAction(user, room, ruleResponse);
             }
 
             return false;
+        }
+
+        [Connected(true, true)]
+        public async Task<bool> Redraw(bool redraw)
+        {
+            var ruleResponse = new RuleResponse();
+            var user = Context.Items["user"] as User;
+            var room = Context.Items["room"] as Room;
+            var opponent = room!.Opponent;
+            var game = Context.Items["game"] as Game;
+            var playerInfo = game!.GetMyPlayerInformation(user!.Id);
+            var opponentInfo = game!.GetMyPlayerInformation(opponent!.Id);
+
+            if (redraw)
+            {
+                if (playerInfo.HasRedrawn)
+                {
+                    await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_ALREADY_REDRAW", user.Username));
+                }
+                else
+                {
+                    playerInfo.Redraw();
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.BoardUpdated), game);
+                    await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.UserGameMessage), new UserGameMessage("GAME_REDRAW", user.Username));
+                }
+            } else
+            {
+                playerInfo.HasRedrawn = true;
+            }
+
+#if DEBUG
+            opponentInfo.HasRedrawn = true;
+#endif
+
+            if (playerInfo.HasRedrawn && opponentInfo.HasRedrawn)
+            {
+                await Clients.Group(room.Id.ToString()).SendAsync(nameof(IGameHubEvent.WaitOpponent), false);
+            } else
+            {
+                await Clients.Client(user.ConnectionId).SendAsync(nameof(IGameHubEvent.WaitOpponent), true);
+            }
+
+            return true;
         }
 
         [Connected(true, true, true)]

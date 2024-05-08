@@ -19,7 +19,6 @@ namespace OPSProServer.Tests
         private IUserManager _userManager;
         private IRoomManager _roomManager;
         private IFlowManager _resolverManager;
-        private IGameRuleService _gameRuleEngine;
         private CardService _cardService;
         private IUserHub _userHub;
 
@@ -42,8 +41,7 @@ namespace OPSProServer.Tests
             _resolverManager = new FlowManager();
             IOptions<OpsPro> options = Options.Create(new OpsPro() { CardsPath = string.Empty });
             _cardService = new CardService(mockCardServiceLogger.Object, options);
-            _gameRuleEngine = new GameRuleService(_cardService);
-            _userHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager, _gameRuleEngine)
+            _userHub = new GameHub(mock.Object, _cardService, _roomManager, _userManager, _resolverManager)
             {
                 Context = mockHubCallerContext.Object,
                 Clients = mockClients.Object,
