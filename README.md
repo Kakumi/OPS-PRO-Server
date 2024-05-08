@@ -1,6 +1,7 @@
 This application is a server for the One Piece TCG game. It can be used with [OPS Pro](https://github.com/Kakumi/OPS-PRO).
 
 This project is still under development and will enable us to develop a turn-based card game simulation application.
+I started it to learn and try to understand how a turn-based card game works.
 
 Support or contact me :
 <a href="https://discord.gg/2Cr6UdskdQ"><img src="https://discordapp.com/api/guilds/1237756823474536458/widget.png?style=banner2" alt="Discord server"></a>
