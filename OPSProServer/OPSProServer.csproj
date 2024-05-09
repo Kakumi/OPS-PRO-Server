@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Resources\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\OPSProServer.Contracts\OPSProServer.Contracts.csproj" />
   </ItemGroup>
 
